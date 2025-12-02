@@ -13,27 +13,21 @@ public class EnemyAI : MonoBehaviour
 
     [Header("Detection")]
     [SerializeField] private float detectionRange = 8f;
-    [Tooltip("Line-of-sight when already chasing (usually larger than detectionRange).")]
     [SerializeField] private float chaseDetectionRange = 12f;
-    [Tooltip("Vertical tolerance when detecting (player must be within this vertical distance).")]
     [SerializeField] private float verticalTolerance = 3f;
-    [Tooltip("Optional layer mask for line-of-sight blockers. Leave empty to skip LOS check.")]
     [SerializeField] private LayerMask lineOfSightBlockers;
     [SerializeField] private bool requireLineOfSight = false;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 3f;
     [SerializeField] private float returnSpeed = 3f;
-    [Tooltip("If true, flips localScale.x to face movement direction.")]
     [SerializeField] private bool flipSprite = true;
-    [Tooltip("Stop returning when within this distance to spawn.")]
     [SerializeField] private float returnStopThreshold = 0.05f;
 
     [Header("Attack")]
     [SerializeField] private float attackRange = 1.2f;
     [SerializeField] private float attackCooldown = 1.0f;
     [SerializeField] private int sanityDamage = 10;
-    [Tooltip("Delay before damage is applied (wind-up).")]
     [SerializeField] private float attackWindup = 0.25f;
     private float lastAttackTime = -999f;
 
@@ -42,7 +36,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float chaseDropBuffer = 1.0f;
 
     [Header("Debug Visuals")]
-    [Tooltip("If enabled, the enemy tints its SpriteRenderer by state and auto-creates a debug sprite if missing.")]
+    [Tooltip("When enabled, the enemy tints its SpriteRenderer by state and auto-creates a debug sprite if missing.")]
     [SerializeField] private bool useDebugColors = false;
     [SerializeField] private Color idleColor = new Color(0.2f, 0.2f, 0.2f, 1f);
     [SerializeField] private Color chaseColor = new Color(0.6f, 0.4f, 0.2f, 1f);
@@ -52,7 +46,6 @@ public class EnemyAI : MonoBehaviour
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private Collider2D col;
-
     private Vector2 spawnPosition;
 
     private void Awake()
@@ -67,7 +60,7 @@ public class EnemyAI : MonoBehaviour
         // Only auto-add a simple square sprite if debug visuals are enabled and missing
         if (useDebugColors && sr == null)
         {
-            GameObject spriteGO = new GameObject("Sprite");
+            var spriteGO = new GameObject("Sprite");
             spriteGO.transform.SetParent(transform, false);
             sr = spriteGO.AddComponent<SpriteRenderer>();
             sr.sprite = GenerateDebugSprite();

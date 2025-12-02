@@ -7,15 +7,13 @@ public class SanityVision : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private PlayerControlls player;
-    [SerializeField] private Image overlayImage; // optional; auto-created if null
+    [SerializeField] private Image overlayImage; // Optional: if unset, auto-created
 
     [Header("Enable Threshold")]
     [SerializeField] private int threshold = 30;
 
     [Header("Circle Radius (normalized 0..1)")]
-    [Tooltip("Radius used when sanity <= threshold")]
     [SerializeField] private float lowRadius = 0.18f;
-    [Tooltip("Radius used when sanity > threshold")]
     [SerializeField] private float highRadius = 0.30f;
 
     [Header("Center Control")]
@@ -38,6 +36,7 @@ public class SanityVision : MonoBehaviour
 
     private void Awake()
     {
+        // Singleton + persist
         if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
@@ -47,11 +46,13 @@ public class SanityVision : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         if (player == null) player = PlayerControlls.Instance;
-        EnsureOverlay();
+
+        SetupOverlay();
         PlayerControlls.OnSanityChanged += HandleSanityChanged;
 
         currentRadius = highRadius;
         targetRadius = highRadius;
+
         ApplyStaticParams();
         SyncNow();
     }
@@ -62,64 +63,7 @@ public class SanityVision : MonoBehaviour
         PlayerControlls.OnSanityChanged -= HandleSanityChanged;
     }
 
-    private void EnsureOverlay()
-    {
-        if (overlayImage != null)
-        {
-            var shader = Shader.Find(ShaderName);
-            if (shader != null)
-            {
-                if (overlayImage.material == null || overlayImage.material.shader != shader)
-                {
-                    mat = new Material(shader);
-                    overlayImage.material = mat;
-                }
-                else
-                {
-                    mat = overlayImage.material;
-                }
-
-                // Apply requested tiling and offset
-                overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1f));
-                overlayImage.material.SetTextureOffset("_MainTex", new Vector2(-0.33f, 0f));
-            }
-            return;
-        }
-
-        var canvasGO = new GameObject("SanityVisionCanvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 0; // render behind HUD
-        canvasGO.AddComponent<CanvasScaler>();
-        canvasGO.AddComponent<GraphicRaycaster>();
-        DontDestroyOnLoad(canvasGO);
-
-        var imgGO = new GameObject("SanityVisionOverlay");
-        imgGO.transform.SetParent(canvasGO.transform, false);
-        overlayImage = imgGO.AddComponent<Image>();
-        overlayImage.raycastTarget = false;
-        overlayImage.color = Color.white;
-
-        var rt = overlayImage.rectTransform;
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-
-        var shader2 = Shader.Find(ShaderName);
-        if (shader2 != null)
-        {
-            mat = new Material(shader2);
-            overlayImage.material = mat;
-
-            // Apply requested tiling and offset
-            overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1f));
-            overlayImage.material.SetTextureOffset("_MainTex", new Vector2(-0.33f, 0f));
-        }
-        overlayImage.enabled = false;
-    }
-
-    private void HandleSanityChanged(int current, int max)
+    private void HandleSanityChanged(int current, int _)
     {
         bool shouldEnable = current <= threshold;
         if (shouldEnable != active)
@@ -148,7 +92,7 @@ public class SanityVision : MonoBehaviour
     {
         if (mat == null) return;
 
-        // Recompute target each frame so Inspector changes apply immediately
+        // Radius
         targetRadius = active ? lowRadius : highRadius;
         currentRadius = Mathf.Lerp(currentRadius, targetRadius, Time.deltaTime * 6f);
 
@@ -157,14 +101,13 @@ public class SanityVision : MonoBehaviour
         if (followPlayer && player != null && Camera.main != null)
         {
             var vp = Camera.main.WorldToViewportPoint(player.transform.position);
-            center.x = vp.x;
-            center.y = vp.y;
+            center = new Vector2(vp.x, vp.y);
         }
         center += centerOffsetNormalized;
         center.x = Mathf.Clamp01(center.x);
         center.y = Mathf.Clamp01(center.y);
 
-        // Send to shader
+        // Shader params
         mat.SetVector("_Center", new Vector4(center.x, center.y, 0f, 0f));
         mat.SetFloat("_Radius", currentRadius);
         mat.SetFloat("_Feather", feather);
@@ -186,5 +129,53 @@ public class SanityVision : MonoBehaviour
     {
         var p = player ?? PlayerControlls.Instance;
         if (p != null) HandleSanityChanged(p.CurrentSanity, p.MaxSanity);
+    }
+
+    private void SetupOverlay()
+    {
+        // Use provided Image or create one with a dedicated Canvas behind HUD
+        if (overlayImage == null)
+        {
+            var canvasGO = new GameObject("SanityVisionCanvas");
+            var canvas = canvasGO.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 0; // behind HUD
+            canvasGO.AddComponent<CanvasScaler>();
+            canvasGO.AddComponent<GraphicRaycaster>();
+            DontDestroyOnLoad(canvasGO);
+
+            var imgGO = new GameObject("SanityVisionOverlay");
+            imgGO.transform.SetParent(canvasGO.transform, false);
+            overlayImage = imgGO.AddComponent<Image>();
+            overlayImage.raycastTarget = false;
+            overlayImage.color = Color.white;
+
+            var rt = overlayImage.rectTransform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        var shader = Shader.Find(ShaderName);
+        if (shader != null)
+        {
+            // Reuse material if already correct, else create
+            if (overlayImage.material == null || overlayImage.material.shader != shader)
+            {
+                mat = new Material(shader);
+                overlayImage.material = mat;
+            }
+            else
+            {
+                mat = overlayImage.material;
+            }
+
+            // Tiling and offset for the UI texture
+            overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1f));
+            overlayImage.material.SetTextureOffset("_MainTex", new Vector2(-0.33f, 0f));
+        }
+
+        overlayImage.enabled = false;
     }
 }

@@ -8,36 +8,44 @@ using UnityEngine.UI;
 public class PlayerControlls : MonoBehaviour
 {
     // ---- Components & runtime state ----
+    public static PlayerControlls Instance;
+
     private Rigidbody2D rb;
-    Animator anim;
+    private Animator anim;
 
     // ---- Movement ----
-    [Header("Horizontal Movement Settings")]
+    [Header("Horizontal Movement")]
     [SerializeField] private float walkSpeed = 5f;
+    [SerializeField] private bool enableRigidbodyInterpolation = true;
+
     private float xAxis;
     private float lastMoveDir = 1f;
+    private bool isFacingRight = true;
+    private const float runInputThreshold = 0.01f;
 
     [Header("Air Movement")]
     [SerializeField] private float airAcceleration = 20f;
-    [SerializeField][Range(0f, 1f)] private float airControlMultiplier = 0.9f;
-    [SerializeField][Range(0f, 1f)] private float airDecelerationMultiplier = 0.25f;
+    [SerializeField] [Range(0f, 1f)] private float airControlMultiplier = 0.9f;
+    [SerializeField] [Range(0f, 1f)] private float airDecelerationMultiplier = 0.25f;
     [SerializeField] private float airTurnMultiplier = 3f;
 
-    [Header("Jump Settings")]
+    [Header("Jump")]
     [SerializeField] private float jumpForce = 10f;
-    [SerializeField][Range(0f, 1f)] private float secondJumpMultiplier = 0.4f;
+    [SerializeField] [Range(0f, 1f)] private float secondJumpMultiplier = 0.4f;
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.1f;
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private int maxJumps = 2;
+
     private int jumpsLeft;
     private bool isGrounded;
-    private bool wasGrounded = false;
+    private bool wasGrounded;
+    private float originalGravityScale = 1f;
 
-    [Header("Fast Fall Settings")]
+    [Header("Fast Fall")]
     [SerializeField] private float fastFallForce = 30f;
 
-    [Header("Dash Settings")]
+    [Header("Dash")]
     [SerializeField] private KeyCode dashKey = KeyCode.LeftShift;
     [SerializeField] private float dashSpeed = 18f;
     [SerializeField] private float dashDuration = 0.15f;
@@ -47,27 +55,23 @@ public class PlayerControlls : MonoBehaviour
     [Header("Action Lock / Post-dash")]
     [SerializeField] private float actionLockDuration = 0.12f;
     [SerializeField] private float postDashHangDuration = 0.12f;
-    [SerializeField][Range(0f, 1f)] private float postDashGravityMultiplier = 0.35f;
+    [SerializeField] [Range(0f, 1f)] private float postDashGravityMultiplier = 0.35f;
     [SerializeField] private float postDashSpeedMultiplier = 0.9f;
     [SerializeField] private float postDashUpwardBoost = 0.2f;
     [SerializeField] private float postDashDecelDuration = 0.25f;
 
-    private bool isDashing = false;
-    private bool isPostDashHang = false;
+    private bool isDashing;
+    private bool isPostDashHang;
     private float lastDashTime = -999f;
-    private float actionLockedUntil = 0f;
+    private float actionLockedUntil;
 
-    [Header("Input / Movement Tweaks")]
+    [Header("Input Tweaks")]
     [SerializeField] private float inputHoldAfterJump = 0.12f;
-    private float inputHoldTimer = 0f;
-    private float retainedXAxis = 0f;
-
-    [Header("Debug / Physics")]
-    [SerializeField] private bool enableRigidbodyInterpolation = true;
-    private float originalGravityScale = 1f;
+    private float inputHoldTimer;
+    private float retainedXAxis;
 
     // ---- Attack ----
-    [Header("Attack Settings")]
+    [Header("Attack")]
     [SerializeField] private KeyCode attackKey = KeyCode.J;
     [SerializeField] private float attackCooldown = 0.35f;
     [SerializeField] private float attackDuration = 0.12f;
@@ -76,13 +80,12 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private LayerMask attackLayer;
     [SerializeField] private int attackDamage = 1;
 
-    [Header("Per-side Attack Ranges (<=0 uses default)")]
+    [Header("Per-side Attack Overrides (<=0 uses default, Vector2.zero uses default)")]
     [SerializeField] private float attackRangeRight = 0.8f;
     [SerializeField] private float attackRangeLeft = 0.8f;
     [SerializeField] private float attackRangeUp = 0.8f;
     [SerializeField] private float attackRangeDown = 0.8f;
 
-    [Header("Per-side Attack Box Sizes (Vector2.zero uses default)")]
     [SerializeField] private Vector2 attackBoxSizeRight = new Vector2(1.0f, 0.6f);
     [SerializeField] private Vector2 attackBoxSizeLeft = new Vector2(1.0f, 0.6f);
     [SerializeField] private Vector2 attackBoxSizeUp = new Vector2(1.0f, 0.6f);
@@ -90,13 +93,9 @@ public class PlayerControlls : MonoBehaviour
 
     private float lastAttackTime = -999f;
 
-    public static PlayerControlls Instance;
-    private const float runInputThreshold = 0.01f;
-
-    [Header("Facing / Turn Animation")]
+    [Header("Facing / Animator")]
     [SerializeField] private string facingAnimatorParameter = "facingRight";
     [SerializeField] private bool useSpriteFlip = true;
-    private bool isFacingRight = true;
 
     // ---- Sanity ----
     [Header("Sanity")]
@@ -107,7 +106,7 @@ public class PlayerControlls : MonoBehaviour
     [Tooltip("Sanity gained per damage point dealt to enemies.")]
     [SerializeField] private int sanityPerDamagePoint = 5;
 
-    [Header("Hub Sanity Settings")]
+    [Header("Hub Sanity")]
     [SerializeField] private string hubSceneName = "Hub";
     [SerializeField] private int hubFirstEnterSanity = 50;
     [SerializeField] private int hubReturnBonus = 30;
@@ -117,8 +116,6 @@ public class PlayerControlls : MonoBehaviour
 
     [Tooltip("Optional: assign UI Slider. If null, a temp persistent one is created.")]
     [SerializeField] private Slider sanitySlider;
-
-    // New: value text for the temporary sanity UI
     private Text sanityValueText;
 
     [Header("Save / Testing")]
@@ -127,6 +124,7 @@ public class PlayerControlls : MonoBehaviour
 
     public static Action<int, int> OnSanityChanged; // current, max
 
+    // ---- Unity lifecycle ----
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -137,7 +135,6 @@ public class PlayerControlls : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // Optional: reset saves when entering Play mode (useful for testing first-run behavior)
         if (resetSavesOnPlay)
         {
             PlayerPrefs.DeleteKey(PrefKeySanity);
@@ -145,11 +142,9 @@ public class PlayerControlls : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        // Load persisted sanity (or keep serialized default if none)
-        if (PlayerPrefs.HasKey(PrefKeySanity))
-            sanity = Mathf.Clamp(PlayerPrefs.GetInt(PrefKeySanity, sanity), 0, maxSanity);
-        else
-            sanity = Mathf.Clamp(sanity, 0, maxSanity);
+        sanity = PlayerPrefs.HasKey(PrefKeySanity)
+            ? Mathf.Clamp(PlayerPrefs.GetInt(PrefKeySanity, sanity), 0, maxSanity)
+            : Mathf.Clamp(sanity, 0, maxSanity);
 
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
@@ -173,7 +168,7 @@ public class PlayerControlls : MonoBehaviour
                 rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         }
 
-        isFacingRight = transform.localScale.x < 0f ? false : (lastMoveDir >= 0f);
+        isFacingRight = transform.localScale.x >= 0f ? (lastMoveDir >= 0f) : false;
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
 
@@ -205,7 +200,7 @@ public class PlayerControlls : MonoBehaviour
         EnsureSanityUI();
         UpdateSanityUI();
 
-        if (string.Equals(scene.name, hubSceneName))
+        if (scene.name == hubSceneName)
         {
             bool hubVisited = PlayerPrefs.GetInt(PrefKeyHubVisited, 0) == 1;
             if (!hubVisited)
@@ -222,28 +217,23 @@ public class PlayerControlls : MonoBehaviour
 
         ApplySceneSpawn();
         PersistSanity();
-
-        // NEW: always notify listeners after a scene load
         OnSanityChanged?.Invoke(sanity, maxSanity);
     }
 
+    // ---- Scene spawn ----
     private void ApplySceneSpawn()
     {
         string nextId = SceneSpawnState.NextSpawnId;
         if (string.IsNullOrEmpty(nextId)) return;
 
-        var spawns = GameObject.FindObjectsOfType<PlayerSpawn>();
-        PlayerSpawn match = spawns.FirstOrDefault(s => s.spawnId == nextId);
-        if (match == null)
-            match = spawns.FirstOrDefault(s => s.spawnId == "default");
-
-        if (match != null)
-            transform.position = match.transform.position;
+        var spawns = FindObjectsOfType<PlayerSpawn>();
+        var match = spawns.FirstOrDefault(s => s.spawnId == nextId) ?? spawns.FirstOrDefault(s => s.spawnId == "default");
+        if (match != null) transform.position = match.transform.position;
 
         SceneSpawnState.NextSpawnId = null;
     }
 
-    // ---- Input handlers ----
+    // ---- Inputs ----
     private void ReadInputs()
     {
         if (inputHoldTimer > 0f)
@@ -272,20 +262,16 @@ public class PlayerControlls : MonoBehaviour
 
     private void HandleDashInput()
     {
-        if (Input.GetKeyDown(dashKey) && !isDashing && Time.time >= lastDashTime + dashCooldown && Time.time >= actionLockedUntil)
-        {
+        bool canDash = !isDashing && Time.time >= lastDashTime + dashCooldown && Time.time >= actionLockedUntil;
+        if (canDash && Input.GetKeyDown(dashKey))
             StartCoroutine(Dash());
-        }
     }
 
     private void HandleAttackInput()
     {
-        if ((Input.GetKeyDown(attackKey) || Input.GetButtonDown("Fire1")) &&
-            Time.time >= lastAttackTime + attackCooldown &&
-            Time.time >= actionLockedUntil)
-        {
+        bool canAttack = Time.time >= lastAttackTime + attackCooldown && Time.time >= actionLockedUntil;
+        if (canAttack && (Input.GetKeyDown(attackKey) || Input.GetButtonDown("Fire1")))
             Attack();
-        }
     }
 
     // ---- Movement ----
@@ -300,8 +286,7 @@ public class PlayerControlls : MonoBehaviour
         if (Mathf.Abs(xAxis) > runInputThreshold)
         {
             bool wantRight = xAxis > 0f;
-            if (wantRight != isFacingRight)
-                SetFacing(wantRight);
+            if (wantRight != isFacingRight) SetFacing(wantRight);
         }
 
         if (isDashing || (isPostDashHang && !isGrounded)) return;
@@ -311,18 +296,17 @@ public class PlayerControlls : MonoBehaviour
         if (isGrounded)
         {
             rb.velocity = new Vector2(targetX, rb.velocity.y);
+            return;
         }
-        else
-        {
-            float airTargetX = xAxis * walkSpeed * airControlMultiplier;
-            float currentX = rb.velocity.x;
-            float accel = (Mathf.Abs(xAxis) > 0.01f) ? airAcceleration : airAcceleration * airDecelerationMultiplier;
 
-            if (Mathf.Abs(xAxis) > 0.01f && currentX * airTargetX < 0f) accel *= airTurnMultiplier;
+        float airTargetX = xAxis * walkSpeed * airControlMultiplier;
+        float currentX = rb.velocity.x;
+        float accel = (Mathf.Abs(xAxis) > 0.01f) ? airAcceleration : airAcceleration * airDecelerationMultiplier;
 
-            float newX = Mathf.MoveTowards(currentX, airTargetX, accel * Time.fixedDeltaTime);
-            rb.velocity = new Vector2(newX, rb.velocity.y);
-        }
+        if (Mathf.Abs(xAxis) > 0.01f && currentX * airTargetX < 0f) accel *= airTurnMultiplier;
+
+        float newX = Mathf.MoveTowards(currentX, airTargetX, accel * Time.fixedDeltaTime);
+        rb.velocity = new Vector2(newX, rb.velocity.y);
     }
 
     private void SetFacing(bool faceRight)
@@ -330,8 +314,7 @@ public class PlayerControlls : MonoBehaviour
         isFacingRight = faceRight;
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
-        if (useSpriteFlip)
-            FlipSprite();
+        if (useSpriteFlip) FlipSprite();
     }
 
     private void FlipSprite()
@@ -343,8 +326,7 @@ public class PlayerControlls : MonoBehaviour
 
     private void Jump()
     {
-        if (anim != null)
-            anim.SetBool("jumping", true);
+        if (anim != null) anim.SetBool("jumping", true);
 
         retainedXAxis = xAxis;
         inputHoldTimer = inputHoldAfterJump;
@@ -356,8 +338,7 @@ public class PlayerControlls : MonoBehaviour
 
     private IEnumerator Dash()
     {
-        if (anim != null && !string.IsNullOrEmpty(dashTriggerParameter))
-            anim.SetTrigger(dashTriggerParameter);
+        if (anim != null && !string.IsNullOrEmpty(dashTriggerParameter)) anim.SetTrigger(dashTriggerParameter);
 
         isDashing = true;
         lastDashTime = Time.time;
@@ -422,9 +403,7 @@ public class PlayerControlls : MonoBehaviour
     {
         if (isDashing || isPostDashHang) return;
         if (!isGrounded && (Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.DownArrow)))
-        {
             rb.AddForce(Vector2.down * fastFallForce, ForceMode2D.Force);
-        }
     }
 
     private void CheckGrounded()
@@ -471,11 +450,8 @@ public class PlayerControlls : MonoBehaviour
             totalDamageDealt += attackDamage;
         }
 
-        // Award sanity based on total damage dealt
         if (totalDamageDealt > 0 && sanityPerDamagePoint > 0)
-        {
             RestoreSanity(totalDamageDealt * sanityPerDamagePoint);
-        }
 
         actionLockedUntil = Time.time + attackDuration;
     }
@@ -530,7 +506,7 @@ public class PlayerControlls : MonoBehaviour
         SetSanity(sanity - amount);
         if (sanity <= 0)
         {
-            // TODO: handle zero sanity
+            // TODO: handle zero sanity (death, game over, etc.)
         }
     }
 
@@ -540,52 +516,53 @@ public class PlayerControlls : MonoBehaviour
         SetSanity(sanity + amount);
     }
 
+    // ---- Temp sanity UI ----
     private void EnsureSanityUI()
     {
         if (sanitySlider != null) return;
 
-        GameObject canvasGO = new GameObject("TempSanityCanvas");
-        Canvas canvas = canvasGO.AddComponent<Canvas>();
+        var canvasGO = new GameObject("TempSanityCanvas");
+        var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100; // render above overlay
         canvasGO.AddComponent<CanvasScaler>();
         canvasGO.AddComponent<GraphicRaycaster>();
         DontDestroyOnLoad(canvasGO);
 
-        GameObject sliderGO = new GameObject("TempSanityBar");
+        var sliderGO = new GameObject("TempSanityBar");
         sliderGO.transform.SetParent(canvasGO.transform, false);
         sanitySlider = sliderGO.AddComponent<Slider>();
 
-        RectTransform rt = sliderGO.GetComponent<RectTransform>();
+        var rt = sliderGO.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
         rt.anchoredPosition = new Vector2(12f, -12f);
         rt.sizeDelta = new Vector2(200f, 20f);
 
-        GameObject bgGO = new GameObject("Background");
+        var bgGO = new GameObject("Background");
         bgGO.transform.SetParent(sliderGO.transform, false);
-        Image bgImg = bgGO.AddComponent<Image>();
+        var bgImg = bgGO.AddComponent<Image>();
         bgImg.color = new Color(0f, 0f, 0f, 0.75f);
-        RectTransform bgRt = bgGO.GetComponent<RectTransform>();
+        var bgRt = bgGO.GetComponent<RectTransform>();
         bgRt.anchorMin = Vector2.zero;
         bgRt.anchorMax = Vector2.one;
         bgRt.offsetMin = Vector2.zero;
         bgRt.offsetMax = Vector2.zero;
 
-        GameObject fillAreaGO = new GameObject("Fill Area");
+        var fillAreaGO = new GameObject("Fill Area");
         fillAreaGO.transform.SetParent(sliderGO.transform, false);
-        RectTransform fillRt = fillAreaGO.AddComponent<RectTransform>();
+        var fillRt = fillAreaGO.AddComponent<RectTransform>();
         fillRt.anchorMin = new Vector2(0f, 0f);
         fillRt.anchorMax = new Vector2(1f, 1f);
         fillRt.offsetMin = new Vector2(4f, 4f);
         fillRt.offsetMax = new Vector2(-4f, -4f);
 
-        GameObject fillGO = new GameObject("Fill");
+        var fillGO = new GameObject("Fill");
         fillGO.transform.SetParent(fillAreaGO.transform, false);
-        Image fillImg = fillGO.AddComponent<Image>();
+        var fillImg = fillGO.AddComponent<Image>();
         fillImg.color = new Color(0.8f, 0.1f, 0.1f, 1f);
-        RectTransform fRt = fillGO.GetComponent<RectTransform>();
+        var fRt = fillGO.GetComponent<RectTransform>();
         fRt.anchorMin = new Vector2(0f, 0f);
         fRt.anchorMax = new Vector2(1f, 1f);
         fRt.offsetMin = Vector2.zero;
@@ -599,7 +576,7 @@ public class PlayerControlls : MonoBehaviour
         sanitySlider.targetGraphic = fillImg;
         sanitySlider.fillRect = fRt;
 
-        GameObject labelGO = new GameObject("Label");
+        var labelGO = new GameObject("Label");
         labelGO.transform.SetParent(sliderGO.transform, false);
         var label = labelGO.AddComponent<Text>();
         label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
@@ -607,15 +584,14 @@ public class PlayerControlls : MonoBehaviour
         label.text = "Sanity";
         label.color = Color.white;
         label.alignment = TextAnchor.MiddleLeft;
-        RectTransform lRt = labelGO.GetComponent<RectTransform>();
+        var lRt = labelGO.GetComponent<RectTransform>();
         lRt.anchorMin = new Vector2(0f, 0f);
         lRt.anchorMax = new Vector2(0f, 1f);
         lRt.pivot = new Vector2(0f, 0.5f);
         lRt.sizeDelta = new Vector2(60f, 20f);
         lRt.anchoredPosition = new Vector2(-62f, 0f);
 
-        // Value text
-        GameObject valueGO = new GameObject("Value");
+        var valueGO = new GameObject("Value");
         valueGO.transform.SetParent(sliderGO.transform, false);
         sanityValueText = valueGO.AddComponent<Text>();
         sanityValueText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
@@ -623,7 +599,7 @@ public class PlayerControlls : MonoBehaviour
         sanityValueText.text = sanity.ToString();
         sanityValueText.color = Color.white;
         sanityValueText.alignment = TextAnchor.MiddleRight;
-        RectTransform vRt = valueGO.GetComponent<RectTransform>();
+        var vRt = valueGO.GetComponent<RectTransform>();
         vRt.anchorMin = new Vector2(1f, 0f);
         vRt.anchorMax = new Vector2(1f, 1f);
         vRt.pivot = new Vector2(1f, 0.5f);
@@ -658,6 +634,7 @@ public class PlayerControlls : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    // ---- Gizmos ----
     private void OnDrawGizmosSelected()
     {
         if (groundCheck != null)
