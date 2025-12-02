@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-[ExecuteAlways] // allow setup in Edit Mode
 public class SanityVision : MonoBehaviour
 {
     private static SanityVision _instance;
@@ -39,8 +38,6 @@ public class SanityVision : MonoBehaviour
 
     private void Awake()
     {
-        if (!Application.isPlaying) return; // edit-mode setup handled by OnEnable/OnValidate
-
         if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
@@ -50,7 +47,6 @@ public class SanityVision : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         if (player == null) player = PlayerControlls.Instance;
-
         EnsureOverlay();
         PlayerControlls.OnSanityChanged += HandleSanityChanged;
 
@@ -60,45 +56,14 @@ public class SanityVision : MonoBehaviour
         SyncNow();
     }
 
-    private void OnEnable()
-    {
-        // Ensure material and properties exist in Edit Mode too
-        EnsureOverlay();
-
-        // Push static params so the Image previews correctly in Edit Mode
-        ApplyStaticParams();
-
-        // Make sure the Image is enabled in the Editor to preview (no fade in edit mode)
-        if (!Application.isPlaying && overlayImage != null)
-        {
-            overlayImage.enabled = true;
-            alphaMultiplier = 1f; // show overlay preview
-            // Set a neutral center for preview
-            Vector2 center = fixedCenter + centerOffsetNormalized;
-            center.x = Mathf.Clamp01(center.x);
-            center.y = Mathf.Clamp01(center.y);
-            if (mat != null)
-            {
-                mat.SetVector("_Center", new Vector4(center.x, center.y, 0f, 0f));
-                mat.SetFloat("_Radius", highRadius);
-                mat.SetFloat("_Feather", feather);
-                mat.SetColor("_DarkColor", darknessColor);
-            }
-        }
-    }
-
     private void OnDestroy()
     {
-        if (Application.isPlaying)
-        {
-            if (_instance == this) _instance = null;
-            PlayerControlls.OnSanityChanged -= HandleSanityChanged;
-        }
+        if (_instance == this) _instance = null;
+        PlayerControlls.OnSanityChanged -= HandleSanityChanged;
     }
 
     private void EnsureOverlay()
     {
-        // If a UI Image is assigned, ensure it has the correct material in both Edit and Play
         if (overlayImage != null)
         {
             var shader = Shader.Find(ShaderName);
@@ -108,19 +73,18 @@ public class SanityVision : MonoBehaviour
                 {
                     mat = new Material(shader);
                     overlayImage.material = mat;
-                    overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1.00f));
-                    overlayImage.material.SetTextureOffset("_MainTex", Vector2.zero); // optional
                 }
                 else
                 {
                     mat = overlayImage.material;
                 }
+
+                // Apply requested tiling and offset
+                overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1f));
+                overlayImage.material.SetTextureOffset("_MainTex", new Vector2(-0.33f, 0f));
             }
             return;
         }
-
-        // In Play Mode, auto-create a persistent overlay if none is provided
-        if (!Application.isPlaying) return;
 
         var canvasGO = new GameObject("SanityVisionCanvas");
         var canvas = canvasGO.AddComponent<Canvas>();
@@ -146,16 +110,16 @@ public class SanityVision : MonoBehaviour
         {
             mat = new Material(shader2);
             overlayImage.material = mat;
-            overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1.00f));
-            overlayImage.material.SetTextureOffset("_MainTex", Vector2.zero);
+
+            // Apply requested tiling and offset
+            overlayImage.material.SetTextureScale("_MainTex", new Vector2(1.75f, 1f));
+            overlayImage.material.SetTextureOffset("_MainTex", new Vector2(-0.33f, 0f));
         }
         overlayImage.enabled = false;
     }
 
     private void HandleSanityChanged(int current, int max)
     {
-        if (!Application.isPlaying) return;
-
         bool shouldEnable = current <= threshold;
         if (shouldEnable != active)
         {
@@ -181,7 +145,6 @@ public class SanityVision : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!Application.isPlaying) return;
         if (mat == null) return;
 
         // Recompute target each frame so Inspector changes apply immediately
@@ -220,7 +183,6 @@ public class SanityVision : MonoBehaviour
 
     private void SyncNow()
     {
-        if (!Application.isPlaying) return;
         var p = player ?? PlayerControlls.Instance;
         if (p != null) HandleSanityChanged(p.CurrentSanity, p.MaxSanity);
     }
