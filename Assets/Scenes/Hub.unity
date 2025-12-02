@@ -2114,10 +2114,11 @@ MonoBehaviour:
   attackBoxSizeLeft: {x: 2.55, y: 3}
   attackBoxSizeUp: {x: 3, y: 2.55}
   attackBoxSizeDown: {x: 3, y: 2.55}
-  facingAnimatorParameter: facingRight
+  facingAnimatorParameter: 
   useSpriteFlip: 1
   maxSanity: 100
   sanity: 100
+  sanityPerDamagePoint: 5
   hubSceneName: Hub
   hubFirstEnterSanity: 50
   hubReturnBonus: 30

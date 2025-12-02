@@ -1,9 +1,9 @@
+using System; // for Action
 using System.Collections;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using System; // for Action
+using UnityEngine.UI;
 
 public class PlayerControlls : MonoBehaviour
 {
@@ -19,13 +19,13 @@ public class PlayerControlls : MonoBehaviour
 
     [Header("Air Movement")]
     [SerializeField] private float airAcceleration = 20f;
-    [SerializeField] [Range(0f, 1f)] private float airControlMultiplier = 0.9f;
-    [SerializeField] [Range(0f, 1f)] private float airDecelerationMultiplier = 0.25f;
+    [SerializeField][Range(0f, 1f)] private float airControlMultiplier = 0.9f;
+    [SerializeField][Range(0f, 1f)] private float airDecelerationMultiplier = 0.25f;
     [SerializeField] private float airTurnMultiplier = 3f;
 
     [Header("Jump Settings")]
     [SerializeField] private float jumpForce = 10f;
-    [SerializeField] [Range(0f, 1f)] private float secondJumpMultiplier = 0.4f;
+    [SerializeField][Range(0f, 1f)] private float secondJumpMultiplier = 0.4f;
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.1f;
     [SerializeField] private LayerMask groundLayer;
@@ -47,7 +47,7 @@ public class PlayerControlls : MonoBehaviour
     [Header("Action Lock / Post-dash")]
     [SerializeField] private float actionLockDuration = 0.12f;
     [SerializeField] private float postDashHangDuration = 0.12f;
-    [SerializeField] [Range(0f, 1f)] private float postDashGravityMultiplier = 0.35f;
+    [SerializeField][Range(0f, 1f)] private float postDashGravityMultiplier = 0.35f;
     [SerializeField] private float postDashSpeedMultiplier = 0.9f;
     [SerializeField] private float postDashUpwardBoost = 0.2f;
     [SerializeField] private float postDashDecelDuration = 0.25f;
@@ -103,6 +103,10 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private int maxSanity = 100;
     [SerializeField] private int sanity = 100;
 
+    [Header("Sanity Rewards")]
+    [Tooltip("Sanity gained per damage point dealt to enemies.")]
+    [SerializeField] private int sanityPerDamagePoint = 5;
+
     [Header("Hub Sanity Settings")]
     [SerializeField] private string hubSceneName = "Hub";
     [SerializeField] private int hubFirstEnterSanity = 50;
@@ -114,11 +118,14 @@ public class PlayerControlls : MonoBehaviour
     [Tooltip("Optional: assign UI Slider. If null, a temp persistent one is created.")]
     [SerializeField] private Slider sanitySlider;
 
+    // New: value text for the temporary sanity UI
+    private Text sanityValueText;
+
     [Header("Save / Testing")]
     [Tooltip("If true, clears saved sanity and hub visit flag when Play starts.")]
     [SerializeField] private bool resetSavesOnPlay = false;
 
-    public static Action<int,int> OnSanityChanged; // current, max
+    public static Action<int, int> OnSanityChanged; // current, max
 
     private void Awake()
     {
@@ -456,9 +463,18 @@ public class PlayerControlls : MonoBehaviour
         Vector2 boxCenter = origin + dir * range;
 
         Collider2D[] hits = Physics2D.OverlapBoxAll(boxCenter, boxSize, 0f, attackLayer);
+
+        int totalDamageDealt = 0;
         foreach (var c in hits)
         {
             c.transform.SendMessage("TakeDamage", attackDamage, SendMessageOptions.DontRequireReceiver);
+            totalDamageDealt += attackDamage;
+        }
+
+        // Award sanity based on total damage dealt
+        if (totalDamageDealt > 0 && sanityPerDamagePoint > 0)
+        {
+            RestoreSanity(totalDamageDealt * sanityPerDamagePoint);
         }
 
         actionLockedUntil = Time.time + attackDuration;
@@ -586,6 +602,8 @@ public class PlayerControlls : MonoBehaviour
         GameObject labelGO = new GameObject("Label");
         labelGO.transform.SetParent(sliderGO.transform, false);
         var label = labelGO.AddComponent<Text>();
+        label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        label.fontSize = 14;
         label.text = "Sanity";
         label.color = Color.white;
         label.alignment = TextAnchor.MiddleLeft;
@@ -595,6 +613,22 @@ public class PlayerControlls : MonoBehaviour
         lRt.pivot = new Vector2(0f, 0.5f);
         lRt.sizeDelta = new Vector2(60f, 20f);
         lRt.anchoredPosition = new Vector2(-62f, 0f);
+
+        // Value text
+        GameObject valueGO = new GameObject("Value");
+        valueGO.transform.SetParent(sliderGO.transform, false);
+        sanityValueText = valueGO.AddComponent<Text>();
+        sanityValueText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        sanityValueText.fontSize = 14;
+        sanityValueText.text = sanity.ToString();
+        sanityValueText.color = Color.white;
+        sanityValueText.alignment = TextAnchor.MiddleRight;
+        RectTransform vRt = valueGO.GetComponent<RectTransform>();
+        vRt.anchorMin = new Vector2(1f, 0f);
+        vRt.anchorMax = new Vector2(1f, 1f);
+        vRt.pivot = new Vector2(1f, 0.5f);
+        vRt.sizeDelta = new Vector2(60f, 20f);
+        vRt.anchoredPosition = new Vector2(62f, 0f);
     }
 
     private void UpdateSanityUI()
@@ -602,6 +636,9 @@ public class PlayerControlls : MonoBehaviour
         if (sanitySlider == null) return;
         sanitySlider.maxValue = maxSanity;
         sanitySlider.value = sanity;
+
+        if (sanityValueText != null)
+            sanityValueText.text = sanity.ToString();
     }
 
     public void NewGameResetSaves()
