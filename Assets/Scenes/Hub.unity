@@ -388,7 +388,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 873658baa7a41004c82e9da86eaa833c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sceneName: Forrest
+  sceneName: House
   delay: 0
   playerTag: Player
 --- !u!1 &291758779

@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 public class ScenePortal : MonoBehaviour
 {
     [Tooltip("Exact scene name as listed in Build Settings")]
-    [SerializeField] private string sceneName = "Forrest";
+    [SerializeField] private string sceneName = "House";
 
     [Tooltip("Optional delay before loading (seconds)")]
     [SerializeField] private float delay = 0f;
