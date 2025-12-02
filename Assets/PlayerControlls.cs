@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System; // for Action
 
 public class PlayerControlls : MonoBehaviour
 {
@@ -117,6 +118,8 @@ public class PlayerControlls : MonoBehaviour
     [Tooltip("If true, clears saved sanity and hub visit flag when Play starts.")]
     [SerializeField] private bool resetSavesOnPlay = false;
 
+    public static Action<int,int> OnSanityChanged; // current, max
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -171,6 +174,8 @@ public class PlayerControlls : MonoBehaviour
         EnsureSanityUI();
         UpdateSanityUI();
         PersistSanity();
+
+        OnSanityChanged?.Invoke(sanity, maxSanity);
     }
 
     private void Update()
@@ -193,7 +198,6 @@ public class PlayerControlls : MonoBehaviour
         EnsureSanityUI();
         UpdateSanityUI();
 
-        // Hub first-entry and return bonus
         if (string.Equals(scene.name, hubSceneName))
         {
             bool hubVisited = PlayerPrefs.GetInt(PrefKeyHubVisited, 0) == 1;
@@ -211,6 +215,9 @@ public class PlayerControlls : MonoBehaviour
 
         ApplySceneSpawn();
         PersistSanity();
+
+        // NEW: always notify listeners after a scene load
+        OnSanityChanged?.Invoke(sanity, maxSanity);
     }
 
     private void ApplySceneSpawn()
@@ -498,6 +505,7 @@ public class PlayerControlls : MonoBehaviour
         sanity = Mathf.Clamp(value, 0, maxSanity);
         UpdateSanityUI();
         PersistSanity();
+        OnSanityChanged?.Invoke(sanity, maxSanity);
     }
 
     public void TakeSanityDamage(int amount)
