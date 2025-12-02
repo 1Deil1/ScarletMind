@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI; // Added for temporary sanity UI
 
 public class PlayerControlls : MonoBehaviour
 {
@@ -100,6 +101,15 @@ public class PlayerControlls : MonoBehaviour
 
     private bool isFacingRight = true;
 
+    // ---- Sanity (Player Health) ----
+    [Header("Sanity")]
+    [SerializeField] private int maxSanity = 100;
+    [SerializeField] private int sanity = 100;
+
+    // Temporary UI (auto-created if null)
+    [Tooltip("Optional: assign a Slider in the scene. If null, a temporary Canvas+Slider will be created at runtime.")]
+    [SerializeField] private Slider sanitySlider;
+
     // ---- Unity callbacks ----
     private void Awake()
     {
@@ -127,6 +137,11 @@ public class PlayerControlls : MonoBehaviour
         // push initial value to animator if present
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
+
+        // Initialize sanity and temporary UI
+        sanity = Mathf.Clamp(sanity, 0, maxSanity);
+        EnsureSanityUI();
+        UpdateSanityUI();
     }
 
     private void Update()
@@ -416,6 +431,115 @@ public class PlayerControlls : MonoBehaviour
     private IEnumerator AttackRoutine()
     {
         yield return new WaitForSeconds(attackDuration);
+    }
+
+    // ---- Sanity API ----
+    public int MaxSanity => maxSanity;
+    public int CurrentSanity => sanity;
+
+    public void SetSanity(int value)
+    {
+        sanity = Mathf.Clamp(value, 0, maxSanity);
+        UpdateSanityUI();
+    }
+
+    public void TakeSanityDamage(int amount)
+    {
+        if (amount <= 0) return;
+        SetSanity(sanity - amount);
+        if (sanity <= 0)
+        {
+            // TODO: handle zero sanity (death, faint, etc.) when we define behavior
+        }
+    }
+
+    public void RestoreSanity(int amount)
+    {
+        if (amount <= 0) return;
+        SetSanity(sanity + amount);
+    }
+
+    private void EnsureSanityUI()
+    {
+        if (sanitySlider != null) return;
+
+        // Create a temporary Canvas + Slider anchored to top-left
+        GameObject canvasGO = new GameObject("TempSanityCanvas");
+        Canvas canvas = canvasGO.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvasGO.AddComponent<CanvasScaler>();
+        canvasGO.AddComponent<GraphicRaycaster>();
+
+        GameObject sliderGO = new GameObject("TempSanityBar");
+        sliderGO.transform.SetParent(canvasGO.transform, false);
+        sanitySlider = sliderGO.AddComponent<Slider>();
+
+        // Configure slider visuals with a simple background and fill
+        RectTransform rt = sliderGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(12f, -12f);
+        rt.sizeDelta = new Vector2(200f, 20f);
+
+        // Background
+        GameObject bgGO = new GameObject("Background");
+        bgGO.transform.SetParent(sliderGO.transform, false);
+        Image bgImg = bgGO.AddComponent<Image>();
+        bgImg.color = new Color(0f, 0f, 0f, 0.75f);
+        RectTransform bgRt = bgGO.GetComponent<RectTransform>();
+        bgRt.anchorMin = Vector2.zero;
+        bgRt.anchorMax = Vector2.one;
+        bgRt.offsetMin = Vector2.zero;
+        bgRt.offsetMax = Vector2.zero;
+
+        // Fill Area
+        GameObject fillAreaGO = new GameObject("Fill Area");
+        fillAreaGO.transform.SetParent(sliderGO.transform, false);
+        RectTransform fillRt = fillAreaGO.AddComponent<RectTransform>();
+        fillRt.anchorMin = new Vector2(0f, 0f);
+        fillRt.anchorMax = new Vector2(1f, 1f);
+        fillRt.offsetMin = new Vector2(4f, 4f);
+        fillRt.offsetMax = new Vector2(-4f, -4f);
+
+        GameObject fillGO = new GameObject("Fill");
+        fillGO.transform.SetParent(fillAreaGO.transform, false);
+        Image fillImg = fillGO.AddComponent<Image>();
+        fillImg.color = new Color(0.8f, 0.1f, 0.1f, 1f); // red fill
+        RectTransform fRt = fillGO.GetComponent<RectTransform>();
+        fRt.anchorMin = new Vector2(0f, 0f);
+        fRt.anchorMax = new Vector2(1f, 1f);
+        fRt.offsetMin = Vector2.zero;
+        fRt.offsetMax = Vector2.zero;
+
+        sanitySlider.direction = Slider.Direction.LeftToRight;
+        sanitySlider.transition = Selectable.Transition.None;
+        sanitySlider.minValue = 0f;
+        sanitySlider.maxValue = maxSanity;
+        sanitySlider.value = sanity;
+        sanitySlider.targetGraphic = fillImg;
+        sanitySlider.fillRect = fRt;
+
+        // Optional text label
+        GameObject labelGO = new GameObject("Label");
+        labelGO.transform.SetParent(sliderGO.transform, false);
+        var label = labelGO.AddComponent<Text>();
+        label.text = "Sanity";
+        label.color = Color.white;
+        label.alignment = TextAnchor.MiddleLeft;
+        RectTransform lRt = labelGO.GetComponent<RectTransform>();
+        lRt.anchorMin = new Vector2(0f, 0f);
+        lRt.anchorMax = new Vector2(0f, 1f);
+        lRt.pivot = new Vector2(0f, 0.5f);
+        lRt.sizeDelta = new Vector2(60f, 20f);
+        lRt.anchoredPosition = new Vector2(-62f, 0f);
+    }
+
+    private void UpdateSanityUI()
+    {
+        if (sanitySlider == null) return;
+        sanitySlider.maxValue = maxSanity;
+        sanitySlider.value = sanity;
     }
 
     // ---- Editor visualization ----
