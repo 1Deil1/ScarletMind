@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Linq;
 using UnityEngine;
-using UnityEngine.UI; // Added for temporary sanity UI
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class PlayerControlls : MonoBehaviour
 {
@@ -39,7 +41,6 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private float dashSpeed = 18f;
     [SerializeField] private float dashDuration = 0.15f;
     [SerializeField] private float dashCooldown = 0.25f;
-    // Animator trigger name to fire the dash animation (AnyState -> Dash)
     [SerializeField] private string dashTriggerParameter = "dash";
 
     [Header("Action Lock / Post-dash")]
@@ -89,32 +90,64 @@ public class PlayerControlls : MonoBehaviour
     private float lastAttackTime = -999f;
 
     public static PlayerControlls Instance;
-
-    // small threshold to avoid animation flicker on tiny velocities
     private const float runInputThreshold = 0.01f;
 
     [Header("Facing / Turn Animation")]
-    [Tooltip("Animator bool parameter name that indicates facing right. Create this parameter in the Animator.")]
     [SerializeField] private string facingAnimatorParameter = "facingRight";
-    [Tooltip("If true, the sprite's localScale.x will be flipped when turning. If you use dedicated turn animations only, set false.")]
     [SerializeField] private bool useSpriteFlip = true;
-
     private bool isFacingRight = true;
 
-    // ---- Sanity (Player Health) ----
+    // ---- Sanity ----
     [Header("Sanity")]
     [SerializeField] private int maxSanity = 100;
     [SerializeField] private int sanity = 100;
 
-    // Temporary UI (auto-created if null)
-    [Tooltip("Optional: assign a Slider in the scene. If null, a temporary Canvas+Slider will be created at runtime.")]
+    [Header("Hub Sanity Settings")]
+    [SerializeField] private string hubSceneName = "Hub";
+    [SerializeField] private int hubFirstEnterSanity = 50;
+    [SerializeField] private int hubReturnBonus = 30;
+
+    private const string PrefKeySanity = "PLAYER_SANITY";
+    private const string PrefKeyHubVisited = "HUB_VISITED";
+
+    [Tooltip("Optional: assign UI Slider. If null, a temp persistent one is created.")]
     [SerializeField] private Slider sanitySlider;
 
-    // ---- Unity callbacks ----
+    [Header("Save / Testing")]
+    [Tooltip("If true, clears saved sanity and hub visit flag when Play starts.")]
+    [SerializeField] private bool resetSavesOnPlay = false;
+
     private void Awake()
     {
-        if (Instance != null && Instance != this) Destroy(gameObject);
-        else Instance = this;
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        // Optional: reset saves when entering Play mode (useful for testing first-run behavior)
+        if (resetSavesOnPlay)
+        {
+            PlayerPrefs.DeleteKey(PrefKeySanity);
+            PlayerPrefs.DeleteKey(PrefKeyHubVisited);
+            PlayerPrefs.Save();
+        }
+
+        // Load persisted sanity (or keep serialized default if none)
+        if (PlayerPrefs.HasKey(PrefKeySanity))
+            sanity = Mathf.Clamp(PlayerPrefs.GetInt(PrefKeySanity, sanity), 0, maxSanity);
+        else
+            sanity = Mathf.Clamp(sanity, 0, maxSanity);
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void Start()
@@ -130,25 +163,20 @@ public class PlayerControlls : MonoBehaviour
                 rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         }
 
-        // Initialize facing from transform scale or lastMoveDir
-        if (transform.localScale.x < 0f) isFacingRight = false;
-        else isFacingRight = (lastMoveDir >= 0f);
-
-        // push initial value to animator if present
+        isFacingRight = transform.localScale.x < 0f ? false : (lastMoveDir >= 0f);
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
 
-        // Initialize sanity and temporary UI
         sanity = Mathf.Clamp(sanity, 0, maxSanity);
         EnsureSanityUI();
         UpdateSanityUI();
+        PersistSanity();
     }
 
     private void Update()
     {
         CheckGrounded();
         ReadInputs();
-
         HandleJumpInput();
         HandleDashInput();
         HandleAttackInput();
@@ -158,6 +186,47 @@ public class PlayerControlls : MonoBehaviour
     {
         Move();
         FastFallCheck();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        EnsureSanityUI();
+        UpdateSanityUI();
+
+        // Hub first-entry and return bonus
+        if (string.Equals(scene.name, hubSceneName))
+        {
+            bool hubVisited = PlayerPrefs.GetInt(PrefKeyHubVisited, 0) == 1;
+            if (!hubVisited)
+            {
+                SetSanity(hubFirstEnterSanity);
+                PlayerPrefs.SetInt(PrefKeyHubVisited, 1);
+                PlayerPrefs.Save();
+            }
+            else
+            {
+                RestoreSanity(hubReturnBonus);
+            }
+        }
+
+        ApplySceneSpawn();
+        PersistSanity();
+    }
+
+    private void ApplySceneSpawn()
+    {
+        string nextId = SceneSpawnState.NextSpawnId;
+        if (string.IsNullOrEmpty(nextId)) return;
+
+        var spawns = GameObject.FindObjectsOfType<PlayerSpawn>();
+        PlayerSpawn match = spawns.FirstOrDefault(s => s.spawnId == nextId);
+        if (match == null)
+            match = spawns.FirstOrDefault(s => s.spawnId == "default");
+
+        if (match != null)
+            transform.position = match.transform.position;
+
+        SceneSpawnState.NextSpawnId = null;
     }
 
     // ---- Input handlers ----
@@ -208,14 +277,12 @@ public class PlayerControlls : MonoBehaviour
     // ---- Movement ----
     private void Move()
     {
-        // Update running animation param using input (avoids physics jitter)
         if (anim != null)
         {
             bool isRunning = !isDashing && !isPostDashHang && isGrounded && Mathf.Abs(xAxis) > runInputThreshold;
             anim.SetBool("running", isRunning);
         }
 
-        // Update facing direction and animator param when there's meaningful horizontal input
         if (Mathf.Abs(xAxis) > runInputThreshold)
         {
             bool wantRight = xAxis > 0f;
@@ -247,12 +314,8 @@ public class PlayerControlls : MonoBehaviour
     private void SetFacing(bool faceRight)
     {
         isFacingRight = faceRight;
-
-        // Update animator parameter (if set up)
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
-
-        // Optionally flip sprite visually (useful when you don't have separate turn animations)
         if (useSpriteFlip)
             FlipSprite();
     }
@@ -266,7 +329,6 @@ public class PlayerControlls : MonoBehaviour
 
     private void Jump()
     {
-        // Set jumping true immediately when jump starts
         if (anim != null)
             anim.SetBool("jumping", true);
 
@@ -280,7 +342,6 @@ public class PlayerControlls : MonoBehaviour
 
     private IEnumerator Dash()
     {
-        // fire the animator trigger for dash (AnyState -> Dash)
         if (anim != null && !string.IsNullOrEmpty(dashTriggerParameter))
             anim.SetTrigger(dashTriggerParameter);
 
@@ -346,7 +407,6 @@ public class PlayerControlls : MonoBehaviour
     private void FastFallCheck()
     {
         if (isDashing || isPostDashHang) return;
-        // Fast-fall now activated with F key (and DownArrow); S key removed per request
         if (!isGrounded && (Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.DownArrow)))
         {
             rb.AddForce(Vector2.down * fastFallForce, ForceMode2D.Force);
@@ -365,9 +425,8 @@ public class PlayerControlls : MonoBehaviour
         bool groundedNow = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
         if (groundedNow && !wasGrounded)
         {
-            // landed
             jumpsLeft = maxJumps;
-            if (anim != null) anim.SetBool("jumping", false); // clear jump on landing
+            if (anim != null) anim.SetBool("jumping", false);
         }
 
         wasGrounded = groundedNow;
@@ -398,15 +457,12 @@ public class PlayerControlls : MonoBehaviour
         actionLockedUntil = Time.time + attackDuration;
     }
 
-    // WASD-based pointing for attacks (prioritizes W/S, then A/D)
     private Vector2 DetermineAttackDirection()
     {
         if (Input.GetKey(KeyCode.W)) return Vector2.up;
         if (Input.GetKey(KeyCode.S)) return Vector2.down;
         if (Input.GetKey(KeyCode.A)) return Vector2.left;
         if (Input.GetKey(KeyCode.D)) return Vector2.right;
-
-        // fallback to facing direction when no WASD pressed
         return new Vector2(Mathf.Sign(lastMoveDir), 0f);
     }
 
@@ -441,6 +497,7 @@ public class PlayerControlls : MonoBehaviour
     {
         sanity = Mathf.Clamp(value, 0, maxSanity);
         UpdateSanityUI();
+        PersistSanity();
     }
 
     public void TakeSanityDamage(int amount)
@@ -449,7 +506,7 @@ public class PlayerControlls : MonoBehaviour
         SetSanity(sanity - amount);
         if (sanity <= 0)
         {
-            // TODO: handle zero sanity (death, faint, etc.) when we define behavior
+            // TODO: handle zero sanity
         }
     }
 
@@ -463,18 +520,17 @@ public class PlayerControlls : MonoBehaviour
     {
         if (sanitySlider != null) return;
 
-        // Create a temporary Canvas + Slider anchored to top-left
         GameObject canvasGO = new GameObject("TempSanityCanvas");
         Canvas canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvasGO.AddComponent<CanvasScaler>();
         canvasGO.AddComponent<GraphicRaycaster>();
+        DontDestroyOnLoad(canvasGO);
 
         GameObject sliderGO = new GameObject("TempSanityBar");
         sliderGO.transform.SetParent(canvasGO.transform, false);
         sanitySlider = sliderGO.AddComponent<Slider>();
 
-        // Configure slider visuals with a simple background and fill
         RectTransform rt = sliderGO.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
@@ -482,7 +538,6 @@ public class PlayerControlls : MonoBehaviour
         rt.anchoredPosition = new Vector2(12f, -12f);
         rt.sizeDelta = new Vector2(200f, 20f);
 
-        // Background
         GameObject bgGO = new GameObject("Background");
         bgGO.transform.SetParent(sliderGO.transform, false);
         Image bgImg = bgGO.AddComponent<Image>();
@@ -493,7 +548,6 @@ public class PlayerControlls : MonoBehaviour
         bgRt.offsetMin = Vector2.zero;
         bgRt.offsetMax = Vector2.zero;
 
-        // Fill Area
         GameObject fillAreaGO = new GameObject("Fill Area");
         fillAreaGO.transform.SetParent(sliderGO.transform, false);
         RectTransform fillRt = fillAreaGO.AddComponent<RectTransform>();
@@ -505,7 +559,7 @@ public class PlayerControlls : MonoBehaviour
         GameObject fillGO = new GameObject("Fill");
         fillGO.transform.SetParent(fillAreaGO.transform, false);
         Image fillImg = fillGO.AddComponent<Image>();
-        fillImg.color = new Color(0.8f, 0.1f, 0.1f, 1f); // red fill
+        fillImg.color = new Color(0.8f, 0.1f, 0.1f, 1f);
         RectTransform fRt = fillGO.GetComponent<RectTransform>();
         fRt.anchorMin = new Vector2(0f, 0f);
         fRt.anchorMax = new Vector2(1f, 1f);
@@ -520,7 +574,6 @@ public class PlayerControlls : MonoBehaviour
         sanitySlider.targetGraphic = fillImg;
         sanitySlider.fillRect = fRt;
 
-        // Optional text label
         GameObject labelGO = new GameObject("Label");
         labelGO.transform.SetParent(sliderGO.transform, false);
         var label = labelGO.AddComponent<Text>();
@@ -542,7 +595,23 @@ public class PlayerControlls : MonoBehaviour
         sanitySlider.value = sanity;
     }
 
-    // ---- Editor visualization ----
+    public void NewGameResetSaves()
+    {
+        PlayerPrefs.DeleteKey(PrefKeySanity);
+        PlayerPrefs.DeleteKey(PrefKeyHubVisited);
+        PlayerPrefs.Save();
+
+        sanity = Mathf.Clamp(sanity, 0, maxSanity);
+        UpdateSanityUI();
+        PersistSanity();
+    }
+
+    private void PersistSanity()
+    {
+        PlayerPrefs.SetInt(PrefKeySanity, sanity);
+        PlayerPrefs.Save();
+    }
+
     private void OnDrawGizmosSelected()
     {
         if (groundCheck != null)
