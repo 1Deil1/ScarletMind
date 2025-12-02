@@ -41,7 +41,9 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("Extra buffer distance before abandoning chase (hysteresis). 0 = switch exactly at chaseDetectionRange.")]
     [SerializeField] private float chaseDropBuffer = 1.0f;
 
-    [Header("Debug Colors (auto sprite)")]
+    [Header("Debug Visuals")]
+    [Tooltip("If enabled, the enemy tints its SpriteRenderer by state and auto-creates a debug sprite if missing.")]
+    [SerializeField] private bool useDebugColors = false;
     [SerializeField] private Color idleColor = new Color(0.2f, 0.2f, 0.2f, 1f);
     [SerializeField] private Color chaseColor = new Color(0.6f, 0.4f, 0.2f, 1f);
     [SerializeField] private Color attackColor = new Color(0.8f, 0.2f, 0.2f, 1f);
@@ -62,8 +64,8 @@ public class EnemyAI : MonoBehaviour
         // Record spawn on Awake
         spawnPosition = transform.position;
 
-        // Auto-add a simple square sprite if missing (temporary rectangle visual)
-        if (sr == null)
+        // Only auto-add a simple square sprite if debug visuals are enabled and missing
+        if (useDebugColors && sr == null)
         {
             GameObject spriteGO = new GameObject("Sprite");
             spriteGO.transform.SetParent(transform, false);
@@ -266,7 +268,8 @@ public class EnemyAI : MonoBehaviour
 
     private void UpdateVisualState()
     {
-        if (sr == null) return;
+        if (!useDebugColors || sr == null) return;
+
         switch (state)
         {
             case State.Idle: sr.color = idleColor; break;

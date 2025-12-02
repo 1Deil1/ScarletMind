@@ -3392,7 +3392,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 0}
   overlayImage: {fileID: 0}
-  threshold: 50
+  threshold: 30
   lowRadius: 0.24
   highRadius: 0.33
   followPlayer: 1
