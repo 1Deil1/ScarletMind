@@ -97,6 +97,16 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private string facingAnimatorParameter = "facingRight";
     [SerializeField] private bool useSpriteFlip = true;
 
+    [Header("Animator Parameters")]
+    [SerializeField] private string attackTriggerParameter = "attack";
+    [SerializeField] private string attackRunTriggerParameter = "attackRun";
+    // dashTriggerParameter already exists and is used in Dash()
+    [SerializeField] private string slideTriggerParameter = "slide";
+
+    [Header("Animator States")]
+    [SerializeField] private string locomotionStateName = "Locomotion";
+    [SerializeField] private string dashStateName = "Dash"; // set to your dash state's name
+
     // ---- Sanity ----
     [Header("Sanity")]
     [SerializeField] private int maxSanity = 100;
@@ -123,6 +133,17 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private bool resetSavesOnPlay = false;
 
     public static Action<int, int> OnSanityChanged; // current, max
+
+    // ---- Slide ----
+    [Header("Slide")]
+    [SerializeField] private KeyCode slideKey = KeyCode.C;
+    [SerializeField] private float slideSpeed = 10f;
+    [SerializeField] private float slideDuration = 0.35f;
+    [SerializeField] private float slideCooldown = 0.4f;
+
+    // Runtime
+    private bool isSliding = false;
+    private float lastSlideTime = -999f;
 
     // ---- Unity lifecycle ----
     private void Awake()
@@ -182,11 +203,21 @@ public class PlayerControlls : MonoBehaviour
 
     private void Update()
     {
+        if (inputLocked)
+        {
+            // Keep ground checks and air params updated so animations remain correct
+            CheckGrounded();
+            UpdateAirAnimParams();
+            return;
+        }
+
         CheckGrounded();
         ReadInputs();
         HandleJumpInput();
         HandleDashInput();
+        HandleSlideInput();
         HandleAttackInput();
+        UpdateAirAnimParams();
     }
 
     private void FixedUpdate()
@@ -274,12 +305,23 @@ public class PlayerControlls : MonoBehaviour
             Attack();
     }
 
+    private void HandleSlideInput()
+    {
+        if (!isGrounded) return;
+        if (isSliding || isDashing || isPostDashHang) return;
+        if (Time.time < lastSlideTime + slideCooldown) return;
+        if (Mathf.Abs(xAxis) <= runInputThreshold) return; // must be moving
+        if (!Input.GetKeyDown(slideKey)) return;
+
+        StartCoroutine(Slide());
+    }
+
     // ---- Movement ----
     private void Move()
     {
         if (anim != null)
         {
-            bool isRunning = !isDashing && !isPostDashHang && isGrounded && Mathf.Abs(xAxis) > runInputThreshold;
+            bool isRunning = !isDashing && !isSliding && !isPostDashHang && isGrounded && Mathf.Abs(xAxis) > runInputThreshold;
             anim.SetBool("running", isRunning);
         }
 
@@ -289,7 +331,8 @@ public class PlayerControlls : MonoBehaviour
             if (wantRight != isFacingRight) SetFacing(wantRight);
         }
 
-        if (isDashing || (isPostDashHang && !isGrounded)) return;
+        // Do not apply normal movement while dashing, sliding, or during post-dash hang mid-air
+        if (isDashing || isSliding || (isPostDashHang && !isGrounded)) return;
 
         float targetX = xAxis * walkSpeed;
 
@@ -334,11 +377,23 @@ public class PlayerControlls : MonoBehaviour
         float force = (jumpsLeft == maxJumps) ? jumpForce : jumpForce * secondJumpMultiplier;
         rb.velocity = new Vector2(rb.velocity.x, 0f);
         rb.AddForce(Vector2.up * force, ForceMode2D.Impulse);
+
+        lastJumpTime = Time.time;
+
+        if (anim != null && !string.IsNullOrEmpty(jumpUpStateName))
+        {
+            // start JumpUp immediately to avoid transition delay
+            int hash = Animator.StringToHash(jumpUpStateName);
+            if (anim.HasState(0, hash))
+                anim.Play(hash, 0, 0f);
+        }
     }
 
     private IEnumerator Dash()
     {
-        if (anim != null && !string.IsNullOrEmpty(dashTriggerParameter)) anim.SetTrigger(dashTriggerParameter);
+        // Play dash anim and smoke right away
+        PlayDashAnim();
+        PlayDashSmoke();
 
         isDashing = true;
         lastDashTime = Time.time;
@@ -382,13 +437,18 @@ public class PlayerControlls : MonoBehaviour
                 rb.velocity = new Vector2(curSpeed, rb.velocity.y);
                 yield return new WaitForFixedUpdate();
             }
-
             if (!isGrounded) rb.velocity = new Vector2(0f, rb.velocity.y);
         }
 
         rb.gravityScale = originalGravityScale;
         isPostDashHang = false;
         isDashing = false;
+
+        // Ensure we leave dash visually
+        ReturnToLocomotion();
+
+        var smokeTarget = dashSmokeAnimator != null ? dashSmokeAnimator : anim;
+        SetAnimatorBoolSafe(smokeTarget, dashSmokeBoolParameter, false);
     }
 
     private float DetermineDashDirection()
@@ -429,10 +489,20 @@ public class PlayerControlls : MonoBehaviour
     // ---- Attack ----
     private void Attack()
     {
-        if (isDashing || isPostDashHang) return;
+        if (isDashing || isPostDashHang || isSliding) return;
 
         lastAttackTime = Time.time;
         StartCoroutine(AttackRoutine());
+
+        // Animator trigger selection
+        bool groundedRunning = isGrounded && Mathf.Abs(xAxis) > runInputThreshold;
+        if (anim != null)
+        {
+            if (groundedRunning && !string.IsNullOrEmpty(attackRunTriggerParameter))
+                anim.SetTrigger(attackRunTriggerParameter);
+            else if (!string.IsNullOrEmpty(attackTriggerParameter))
+                anim.SetTrigger(attackTriggerParameter);
+        }
 
         Vector2 origin = (rb != null) ? rb.position : (Vector2)transform.position;
         Vector2 dir = DetermineAttackDirection();
@@ -486,6 +556,8 @@ public class PlayerControlls : MonoBehaviour
     private IEnumerator AttackRoutine()
     {
         yield return new WaitForSeconds(attackDuration);
+        // Safety: force back to locomotion in case Animator transitions aren’t configured yet
+        ReturnToLocomotion();
     }
 
     // ---- Sanity API ----
@@ -656,6 +728,219 @@ public class PlayerControlls : MonoBehaviour
             Vector2 aimDir = DetermineAttackDirection();
             Gizmos.color = Color.green;
             Gizmos.DrawWireCube(origin + aimDir * GetRangeForDir(aimDir), GetBoxSizeForDir(aimDir));
+        }
+    }
+
+    // Add next to other Animator Parameters
+    [SerializeField] private string slidingBoolParameter = ""; // optional; set to "sliding" if your Animator uses a bool
+    [SerializeField] private string jumpUpStateName = "JumpUp"; // optional: name of your upward jump state
+
+    private IEnumerator Slide()
+    {
+        isSliding = true;
+        lastSlideTime = Time.time;
+
+        if (anim != null)
+        {
+            if (!string.IsNullOrEmpty(slideTriggerParameter))
+                anim.SetTrigger(slideTriggerParameter);
+
+            if (!string.IsNullOrEmpty(slidingBoolParameter))
+                anim.SetBool(slidingBoolParameter, true);
+        }
+
+        float end = Time.time + slideDuration;
+        actionLockedUntil = Mathf.Max(actionLockedUntil, end);
+
+        float dir = Mathf.Abs(xAxis) > 0.01f ? Mathf.Sign(xAxis) : lastMoveDir;
+
+        while (Time.time < end)
+        {
+            if (!isGrounded) break;
+            rb.velocity = new Vector2(dir * slideSpeed, rb.velocity.y);
+            yield return new WaitForFixedUpdate();
+        }
+
+        isSliding = false;
+
+        if (anim != null && !string.IsNullOrEmpty(slidingBoolParameter))
+            anim.SetBool(slidingBoolParameter, false);
+
+        // Safety: force back to locomotion in case Animator transitions aren’t configured yet
+        ReturnToLocomotion();
+    }
+
+    // Helper: return to locomotion and clear one-shot triggers
+    private void ReturnToLocomotion(float fade = 0.05f)
+    {
+        if (anim == null) return;
+
+        if (!string.IsNullOrEmpty(attackTriggerParameter))     anim.ResetTrigger(attackTriggerParameter);
+        if (!string.IsNullOrEmpty(attackRunTriggerParameter))  anim.ResetTrigger(attackRunTriggerParameter);
+        if (!string.IsNullOrEmpty(dashTriggerParameter))       anim.ResetTrigger(dashTriggerParameter);
+        if (!string.IsNullOrEmpty(slideTriggerParameter))      anim.ResetTrigger(slideTriggerParameter);
+
+        if (!string.IsNullOrEmpty(locomotionStateName))
+            CrossFadeIfExists(locomotionStateName, fade, 0);
+    }
+
+    // Add this helper anywhere in the class (e.g., below PlayDashSmoke)
+    private void CrossFadeIfExists(string stateName, float fade, int layer, string fallbackTrigger = null)
+    {
+        if (anim == null || string.IsNullOrEmpty(stateName)) return;
+
+        int hash = Animator.StringToHash(stateName);
+        if (anim.HasState(layer, hash))
+        {
+            // layer explicitly set to avoid '-1' layer errors
+            anim.CrossFadeInFixedTime(hash, fade, layer, 0f);
+        }
+        else if (!string.IsNullOrEmpty(fallbackTrigger))
+        {
+            anim.ResetTrigger(fallbackTrigger); // safety
+            anim.SetTrigger(fallbackTrigger);
+        }
+    }
+
+    // Update PlayDashAnim() to use the safe crossfade
+    private void PlayDashAnim()
+    {
+        if (anim == null) return;
+
+        // Clear one-shots that could block
+        if (!string.IsNullOrEmpty(attackTriggerParameter))    anim.ResetTrigger(attackTriggerParameter);
+        if (!string.IsNullOrEmpty(attackRunTriggerParameter)) anim.ResetTrigger(attackRunTriggerParameter);
+        if (!string.IsNullOrEmpty(slideTriggerParameter))     anim.ResetTrigger(slideTriggerParameter);
+        if (!string.IsNullOrEmpty(dashTriggerParameter))      anim.ResetTrigger(dashTriggerParameter);
+
+        // Start dash state immediately at time 0 on base layer
+        if (!string.IsNullOrEmpty(dashStateName))
+        {
+            int dashHash = Animator.StringToHash(dashStateName);
+            if (anim.HasState(0, dashHash))
+            {
+                anim.Play(dashHash, 0, 0f);   // no blend, instant start
+            }
+            else if (!string.IsNullOrEmpty(dashTriggerParameter))
+            {
+                anim.SetTrigger(dashTriggerParameter);
+            }
+        }
+        else if (!string.IsNullOrEmpty(dashTriggerParameter))
+        {
+            anim.SetTrigger(dashTriggerParameter);
+        }
+
+        anim.speed = 1f;
+    }
+
+    // References (add near other serialized fields)
+    [Header("Dash FX")]
+    [SerializeField] private Animator dashSmokeAnimator; // child Animator (optional). If null, falls back to 'anim'
+    [SerializeField] private Transform dashSmokeOrigin;  // optional feet/ground point
+    [SerializeField] private string dashSmokeBoolParameter = "dashsmoke";
+    [SerializeField] private float dashSmokeOnDuration = 0.15f;
+
+    // Helper: trigger smoke via bool
+    private void PlayDashSmoke()
+    {
+        Animator target = dashSmokeAnimator != null ? dashSmokeAnimator : anim;
+        if (target == null || string.IsNullOrEmpty(dashSmokeBoolParameter)) return;
+
+        if (dashSmokeAnimator != null && dashSmokeOrigin != null)
+        {
+            var t = dashSmokeAnimator.transform;
+            t.position = dashSmokeOrigin.position;
+            t.rotation = dashSmokeOrigin.rotation;
+            var s = t.localScale;
+            s.x = Mathf.Abs(s.x) * (isFacingRight ? 1f : -1f);
+            t.localScale = s;
+        }
+
+        SetAnimatorBoolSafe(target, dashSmokeBoolParameter, true);
+
+        if (dashSmokeOnDuration > 0f)
+            StartCoroutine(ResetDashSmokeAfter(dashSmokeOnDuration));
+    }
+
+    private IEnumerator ResetDashSmokeAfter(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        Animator target = dashSmokeAnimator != null ? dashSmokeAnimator : anim;
+        SetAnimatorBoolSafe(target, dashSmokeBoolParameter, false);
+    }
+
+    // Safely set a bool on an Animator only if the parameter exists
+    private static void SetAnimatorBoolSafe(Animator a, string param, bool value)
+    {
+        if (a == null || string.IsNullOrEmpty(param)) return;
+        // Check parameter exists
+        foreach (var p in a.parameters)
+        {
+            if (p.name == param && p.type == AnimatorControllerParameterType.Bool)
+            {
+                a.SetBool(param, value);
+                return;
+            }
+        }
+        // Optional: log once per session (comment out if noisy)
+        // Debug.LogWarning($"Animator '{a.name}' missing bool parameter '{param}'.");
+    }
+
+    // Air anim tuning
+    [Header("Air Anim Tuning")]
+    [SerializeField] private float fallYVelThreshold = -0.15f;   // must be below this to start falling
+    [SerializeField] private float apexBufferTime = 0.08f;        // small grace window after apex before falling
+    [SerializeField] private float postJumpGraceTime = 0.10f;     // ignore small negatives right after a jump
+
+    private float lastJumpTime;
+    private float lastApexTime;
+
+    // Update air params with hysteresis
+    private void UpdateAirAnimParams()
+    {
+        if (anim == null) return;
+
+        float y = rb != null ? rb.velocity.y : 0f;
+
+        // Detect apex when velocity crosses from positive to non-positive
+        // and store a small buffer window to prevent immediate fall switch
+        if (y <= 0f && !isGrounded)
+        {
+            // If we were recently ascending, mark apex time
+            if (Time.time - lastJumpTime < 1.0f) // within a second of any jump
+                lastApexTime = Time.time;
+        }
+
+        anim.SetBool("grounded", isGrounded);
+        anim.SetFloat("yVel", y);
+
+        // Control 'jumping' bool lifespan:
+        // - True while airborne and until apex buffer expires
+        // - Cleared on ground contact (handled in CheckGrounded)
+        bool keepJumping =
+            !isGrounded &&
+            (
+                y > 0f ||                                       // clearly ascending
+                (Time.time - lastJumpTime) < postJumpGraceTime || // shortly after jump impulse
+                (Time.time - lastApexTime) < apexBufferTime       // small grace at apex
+            );
+
+        anim.SetBool("jumping", keepJumping);
+    }
+
+    // Add field with other runtime state
+    private bool inputLocked = false;
+
+    // Public API
+    public void SetInputLocked(bool locked)
+    {
+        inputLocked = locked;
+        if (locked)
+        {
+            // stop horizontal motion
+            if (rb != null) rb.velocity = new Vector2(0f, rb.velocity.y);
+            if (anim != null) anim.SetBool("running", false);
         }
     }
 }

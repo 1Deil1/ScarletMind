@@ -1,80 +1,148 @@
 using UnityEngine;
+using UnityEngine.UI;
+
+[System.Serializable]
+public struct DialogueLine
+{
+    public string speaker;   // e.g., "Hero", "Bear"
+    [TextArea(2, 6)] public string text;
+}
 
 public class DialogueTrigger : MonoBehaviour
 {
-    [TextArea(2, 6)]
-    public string[] Lines;         // Dialog lines editable in inspector
-    public GameObject promptUI;    // assign the InteractPrompt GameObject (can contain a TextMeshProUGUI)
+    [Header("Dialogue")]
+    public DialogueLine[] Lines;
+    public GameObject promptUI;
+
+    [Header("Input")]
+    [SerializeField] private KeyCode interactKey = KeyCode.E;
+    [SerializeField] private KeyCode teleportKey = KeyCode.T; // NEW: key to teleport
+    [SerializeField] private Button promptButton;
+
+    [Header("Teleport")]
+    [Tooltip("If true, teleport is only allowed after the dialogue ends.")]
+    [SerializeField] private bool requireDialogueBeforeTeleport = true;
+    [Tooltip("Optional extra prompt UI shown after dialogue to indicate T to enter.")]
+    [SerializeField] private GameObject enterPromptUI; // assign a 'Press T to enter' UI (optional)
+
+    [Header("Speaker (default NPC name for simple use)")]
+    [SerializeField] private string speakerName = "";
+    public string SpeakerName => speakerName;
 
     private bool playerInRange = false;
+    private bool dialogueCompleted = false; // NEW: track completion
+    private ScenePortal portal;             // NEW: cached portal reference
 
     private void Start()
     {
-        Debug.Log($"[DialogueTrigger] Start on '{gameObject.name}'. promptUI assigned: {promptUI != null}. Lines count: {(Lines != null ? Lines.Length : 0)}");
-        if (promptUI != null)
-            promptUI.SetActive(false);
+        Debug.Log($"[DialogueTrigger] Start '{gameObject.name}'. promptUI: {promptUI != null}. Lines: {(Lines != null ? Lines.Length : 0)}");
+
+        if (promptUI != null) promptUI.SetActive(false);
+        if (enterPromptUI != null) enterPromptUI.SetActive(false);
+
+        if (promptButton != null)
+        {
+            promptButton.onClick.RemoveAllListeners();
+            promptButton.onClick.AddListener(() => TryStartDialogue());
+        }
+
+        portal = GetComponent<ScenePortal>(); // find portal on same object (recommended)
+        if (portal == null)
+            Debug.LogWarning($"[DialogueTrigger] No ScenePortal found on '{gameObject.name}'. Teleport (T) will be disabled.");
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log($"[DialogueTrigger] OnTriggerEnter: collider='{other.name}', tag='{other.tag}' on '{gameObject.name}'");
-        if (!other.CompareTag("Player"))
-            return;
-
-        Debug.Log($"[DialogueTrigger] Player entered trigger on '{gameObject.name}'");
+        if (!other.CompareTag("Player")) return;
         playerInRange = true;
-        if (promptUI != null)
-            promptUI.SetActive(true);
+
+        // Show appropriate prompt
+        if (!DialogueManagerIsActive())
+        {
+            if (promptUI != null) promptUI.SetActive(true);
+            if (enterPromptUI != null) enterPromptUI.SetActive(dialogueCompleted && portal != null);
+        }
     }
 
-    private void OnTriggerExit(Collider other)
+    private void OnTriggerExit2D(Collider2D other)
     {
-        Debug.Log($"[DialogueTrigger] OnTriggerExit: collider='{other.name}', tag='{other.tag}' on '{gameObject.name}'");
-        if (!other.CompareTag("Player"))
-            return;
-
-        Debug.Log($"[DialogueTrigger] Player exited trigger on '{gameObject.name}'");
+        if (!other.CompareTag("Player")) return;
         playerInRange = false;
-        if (promptUI != null)
-            promptUI.SetActive(false);
+
+        if (promptUI != null) promptUI.SetActive(false);
+        if (enterPromptUI != null) enterPromptUI.SetActive(false);
     }
 
     private void Update()
     {
-        if (!playerInRange)
-            return;
+        if (!playerInRange) return;
 
-        // If dialog is already active, do nothing
-        if (DialogueManager.Instance != null && DialogueManager.Instance.IsActive)
+        // Dialogue in progress? Don't start new or teleport during dialog.
+        if (DialogueManagerIsActive()) return;
+
+        // E: start dialogue
+        if (Input.GetKeyDown(interactKey))
         {
-            // still useful to know why input won't start a new dialog
-            // Debug message intentionally not spammy
+            TryStartDialogue();
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.E))
+        // T: teleport (if allowed)
+        if (Input.GetKeyDown(teleportKey))
         {
-            Debug.Log($"[DialogueTrigger] 'E' pressed while in range on '{gameObject.name}'");
-            // Hide prompt and start dialog
-            if (promptUI != null)
-                promptUI.SetActive(false);
-
-            if (DialogueManager.Instance != null)
-            {
-                DialogueManager.Instance.StartDialogue(Lines, this);
-            }
-            else
-            {
-                Debug.LogWarning("[DialogueTrigger] DialogueManager.Instance is null — make sure a DialogueManager exists in the scene.");
-            }
+            TryTeleport();
         }
+    }
+
+    private bool DialogueManagerIsActive() => DialogueManager.Instance != null && DialogueManager.Instance.IsActive;
+
+    private void TryStartDialogue()
+    {
+        if (promptUI != null) promptUI.SetActive(false);
+        if (enterPromptUI != null) enterPromptUI.SetActive(false);
+
+        dialogueCompleted = false; // reset on new dialog
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.StartDialogue(Lines, this);
+        }
+        else
+        {
+            Debug.LogWarning("[DialogueTrigger] DialogueManager.Instance is null.");
+        }
+    }
+
+    private void TryTeleport()
+    {
+        // Must have a portal
+        if (portal == null)
+        {
+            Debug.LogWarning("[DialogueTrigger] Teleport requested but no ScenePortal component is present.");
+            return;
+        }
+
+        // Respect the requirement
+        if (requireDialogueBeforeTeleport && !dialogueCompleted)
+        {
+            Debug.Log("[DialogueTrigger] Teleport blocked until dialogue is completed.");
+            return;
+        }
+
+        // Trigger the teleport
+        portal.TriggerTeleport();
     }
 
     // Called by DialogueManager when the dialog ends
     public void OnDialogueEnded()
     {
-        Debug.Log($"[DialogueTrigger] OnDialogueEnded called on '{gameObject.name}'. playerInRange={playerInRange}");
-        if (playerInRange && promptUI != null)
-            promptUI.SetActive(true);
+        dialogueCompleted = true;
+
+        // Restore the appropriate prompt(s)
+        if (playerInRange)
+        {
+            if (promptUI != null) promptUI.SetActive(true);
+            if (enterPromptUI != null) enterPromptUI.SetActive(portal != null);
+        }
     }
 }

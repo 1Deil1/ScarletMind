@@ -12,17 +12,12 @@ public class ScenePortal : MonoBehaviour
     [Header("Bidirectional Hub <-> House")]
     [Tooltip("Enable to automatically teleport Hub<->House depending on the current scene")]
     [SerializeField] private bool useHubHousePair = true;
-    [Tooltip("Exact name of the Hub scene (must match Build Settings)")]
     [SerializeField] private string hubSceneName = "Hub";
-    [Tooltip("Exact name of the House scene (must match Build Settings)")]
     [SerializeField] private string houseSceneName = "House";
 
     [Header("Spawn Ids")]
-    [Tooltip("Spawn id used when destination is the Hub scene")]
     [SerializeField] private string hubSpawnId = "hubEntry";
-    [Tooltip("Spawn id used when destination is the House scene")]
     [SerializeField] private string houseSpawnId = "houseEntry";
-    [Tooltip("Fallback spawn id when using single target mode")]
     [SerializeField] private string defaultDestinationSpawnId = "default";
 
     [Tooltip("Optional delay before loading (seconds)")]
@@ -30,6 +25,10 @@ public class ScenePortal : MonoBehaviour
 
     [Tooltip("If set, only objects with this tag will trigger the portal. Leave empty to detect PlayerControlls component.")]
     [SerializeField] private string playerTag = "Player";
+
+    [Header("Activation")]
+    [Tooltip("If true, entering the trigger auto-teleports. Turn OFF when using DialogueTrigger + key press.")]
+    [SerializeField] private bool autoTeleportOnEnter = false; // default off so dialogue can control it
 
     private void Reset()
     {
@@ -39,19 +38,25 @@ public class ScenePortal : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (!autoTeleportOnEnter) return;              // <-- stop auto teleport unless explicitly enabled
+        if (!IsPlayer(other)) return;
+
+        TriggerTeleport();
+    }
+
+    private bool IsPlayer(Collider2D other)
+    {
+        if (!string.IsNullOrEmpty(playerTag))
+            return other.CompareTag(playerTag);
+        return other.GetComponent<PlayerControlls>() != null;
+    }
+
+    // Allow manual teleport via code (used by DialogueTrigger)
+    public void TriggerTeleport()
+    {
         string destination = GetDestinationScene();
         if (string.IsNullOrEmpty(destination)) return;
 
-        if (!string.IsNullOrEmpty(playerTag))
-        {
-            if (!other.CompareTag(playerTag)) return;
-        }
-        else
-        {
-            if (other.GetComponent<PlayerControlls>() == null) return;
-        }
-
-        // Decide spawn id for destination scene
         string spawnId = GetDestinationSpawnId(destination);
         SceneSpawnState.NextSpawnId = spawnId;
 
@@ -63,10 +68,8 @@ public class ScenePortal : MonoBehaviour
         if (useHubHousePair)
         {
             string current = SceneManager.GetActiveScene().name;
-            if (string.Equals(current, hubSceneName))
-                return houseSceneName;
-            if (string.Equals(current, houseSceneName))
-                return hubSceneName;
+            if (string.Equals(current, hubSceneName))   return houseSceneName;
+            if (string.Equals(current, houseSceneName)) return hubSceneName;
         }
         return sceneName;
     }
@@ -75,7 +78,7 @@ public class ScenePortal : MonoBehaviour
     {
         if (useHubHousePair)
         {
-            if (destinationScene == hubSceneName) return hubSpawnId;
+            if (destinationScene == hubSceneName)  return hubSpawnId;
             if (destinationScene == houseSceneName) return houseSpawnId;
         }
         return defaultDestinationSpawnId;

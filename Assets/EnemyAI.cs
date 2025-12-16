@@ -43,6 +43,12 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private Color attackColor = new Color(0.8f, 0.2f, 0.2f, 1f);
     [SerializeField] private Color returningColor = new Color(0.2f, 0.4f, 0.8f, 1f);
 
+    [Header("Animator")]
+    [SerializeField] private Animator animator;
+    [SerializeField] private string idleStateName = "Enemy_Idle";
+    [SerializeField] private string walkBoolParameter = "Enemy_Walk";     // bool
+    [SerializeField] private string attackTriggerParameter = "Enemy_Attack"; // trigger
+
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private Collider2D col;
@@ -53,6 +59,7 @@ public class EnemyAI : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<Collider2D>();
         sr = GetComponent<SpriteRenderer>();
+        if (animator == null) animator = GetComponent<Animator>(); // auto-bind if present
 
         // Record spawn on Awake
         spawnPosition = transform.position;
@@ -81,6 +88,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         UpdateVisualState();
+        UpdateAnimatorState();
     }
 
     private void Update()
@@ -125,6 +133,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         UpdateVisualState();
+        UpdateAnimatorState();
     }
 
     private void FixedUpdate()
@@ -169,6 +178,13 @@ public class EnemyAI : MonoBehaviour
         UpdateVisualState();
         rb.velocity = Vector2.zero;
 
+        // Trigger attack animation
+        if (animator != null && !string.IsNullOrEmpty(attackTriggerParameter))
+        {
+            animator.ResetTrigger(attackTriggerParameter); // safety
+            animator.SetTrigger(attackTriggerParameter);
+        }
+
         lastAttackTime = Time.time;
         yield return new WaitForSeconds(attackWindup);
 
@@ -200,6 +216,7 @@ public class EnemyAI : MonoBehaviour
             state = State.Returning;
 
         UpdateVisualState();
+        UpdateAnimatorState();
     }
 
     private void AcquirePlayerIfNeeded()
@@ -269,6 +286,29 @@ public class EnemyAI : MonoBehaviour
             case State.Chasing: sr.color = chaseColor; break;
             case State.Attacking: sr.color = attackColor; break;
             case State.Returning: sr.color = returningColor; break;
+        }
+    }
+
+    private void UpdateAnimatorState()
+    {
+        if (animator == null) return;
+
+        // Walking when we have horizontal velocity (chasing/returning)
+        bool isWalking = Mathf.Abs(rb != null ? rb.velocity.x : 0f) > 0.01f;
+
+        // Set walk bool
+        if (!string.IsNullOrEmpty(walkBoolParameter))
+            animator.SetBool(walkBoolParameter, isWalking);
+
+        // If not walking and not attacking, ensure we are in idle (optional instant play)
+        if (!isWalking && state != State.Attacking && !string.IsNullOrEmpty(idleStateName))
+        {
+            int idleHash = Animator.StringToHash(idleStateName);
+            if (animator.HasState(0, idleHash))
+            {
+                // keep smooth if already on idle; otherwise instant snap is fine
+                animator.Play(idleHash, 0);
+            }
         }
     }
 
