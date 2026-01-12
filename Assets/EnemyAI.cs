@@ -49,6 +49,10 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private string walkBoolParameter = "Enemy_Walk";     // bool
     [SerializeField] private string attackTriggerParameter = "Enemy_Attack"; // trigger
 
+    [Header("Audio - Enemy SFX")]
+    [SerializeField] private AudioClip enemyAttackHitSfx;
+    [SerializeField] private AudioClip enemyAttackMissSfx;
+
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private Collider2D col;
@@ -189,21 +193,16 @@ public class EnemyAI : MonoBehaviour
         yield return new WaitForSeconds(attackWindup);
 
         // Re-check range before applying damage
+        bool hit = false;
         if (player != null && InAttackRange())
         {
-            if (PlayerControlls.Instance != null)
-            {
-                PlayerControlls.Instance.TakeSanityDamage(sanityDamage);
-            }
-            else
-            {
-                var taggedPlayer = GameObject.FindWithTag("Player");
-                if (taggedPlayer != null)
-                {
-                    Debug.Log("Player hit (no PlayerControlls.Instance found).");
-                }
-            }
+            hit = true;
+            if (PlayerControlls.Instance != null) PlayerControlls.Instance.TakeSanityDamage(sanityDamage);
+            else { var taggedPlayer = GameObject.FindWithTag("Player"); if (taggedPlayer != null) Debug.Log("Player hit (no PlayerControlls.Instance found)."); }
         }
+        // SFX after deciding hit/miss
+        var clip = hit ? enemyAttackHitSfx : enemyAttackMissSfx;
+        if (clip != null) AudioManager.PlaySfxAt(clip, transform.position, 1f);
 
         // Wait remaining cooldown before chasing again
         float remaining = Mathf.Max(0f, (lastAttackTime + attackCooldown) - Time.time);

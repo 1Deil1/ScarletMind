@@ -10,8 +10,15 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Optional cap on camera speed. Use a large number to disable.")]
     [SerializeField] private float maxSpeed = 100f;
 
+    [Header("Vertical limits")]
     [Tooltip("Lowest world Y the camera is allowed to go.")]
     [SerializeField] private float minY = -5f;
+
+    [Tooltip("Enable to cap how high the camera can go.")]
+    [SerializeField] private bool useMaxY = false;
+
+    [Tooltip("Highest world Y the camera is allowed to go when following.")]
+    [SerializeField] private float maxY = 20f;
 
     [SerializeField] private bool useRigidbodyPosition = true;
 
@@ -34,7 +41,14 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Bias towards the interior when near edges. 0 = no bias, 1 = strong bias (camera stays further from the edge).")]
     [Range(0f, 1f)] [SerializeField] private float interiorBias = 0.5f;
 
+    [Header("Camera Lock")]
+    [Tooltip("If true, camera stops following the player and holds position.")]
+    [SerializeField] private bool cameraLocked = false;
+    [Tooltip("Optional fixed position to use while locked. Leave null to hold current position when locking.")]
+    [SerializeField] private Transform lockPosition;
+
     private Vector3 currentVelocity;
+    private Vector3 heldLockPosition; // cached when locking without a Transform
 
     void Start()
     {
@@ -42,11 +56,25 @@ public class CameraFollow : MonoBehaviour
             offset = new Vector3(0f, 0f, -10f);
 
         Vector3 p = transform.position;
-        transform.position = new Vector3(p.x, Mathf.Max(p.y, minY), p.z);
+        float startY = Mathf.Max(p.y, minY);
+        if (useMaxY) startY = Mathf.Min(startY, maxY);
+        transform.position = new Vector3(p.x, startY, p.z);
+
+        // Initialize held lock position to current camera pos
+        heldLockPosition = transform.position;
     }
 
     void LateUpdate()
     {
+        if (cameraLocked)
+        {
+            // Hold at either the provided lock transform or the last recorded position
+            Vector3 target = (lockPosition != null) ? new Vector3(lockPosition.position.x, lockPosition.position.y, transform.position.z)
+                                                    : new Vector3(heldLockPosition.x, heldLockPosition.y, transform.position.z);
+            transform.position = target;
+            return;
+        }
+
         if (PlayerControlls.Instance == null) return;
 
         Rigidbody2D playerRb = useRigidbodyPosition ? PlayerControlls.Instance.GetComponent<Rigidbody2D>() : null;
@@ -58,17 +86,47 @@ public class CameraFollow : MonoBehaviour
         // Desired follow (before bounds)
         float desiredX = playerPos.x + offset.x;
         float desiredY = Mathf.Max(playerPos.y + offset.y, minY);
+        if (useMaxY) desiredY = Mathf.Min(desiredY, maxY); // cap upward motion
         float desiredZ = playerPos.z + offset.z;
         Vector3 desired = new Vector3(desiredX, desiredY, desiredZ);
 
         // Confine to the best bounds and soften horizontal near edges
         Vector3 targetPos = ConfineWithSoftEdges(desired);
 
+        // Final safety clamp on Y to respect user max (after bounds)
+        if (useMaxY)
+            targetPos.y = Mathf.Min(targetPos.y, maxY);
+
         float currentSmooth = smoothTime;
         if (playerRb != null && playerRb.velocity.magnitude > speedThresholdForTightFollow)
             currentSmooth = fastSmoothTime;
 
         transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, currentSmooth, maxSpeed, Time.deltaTime);
+    }
+
+    // Public API to lock/unlock camera follow
+    public void SetCameraLocked(bool locked, Transform optionalLockPosition = null)
+    {
+        cameraLocked = locked;
+        lockPosition = optionalLockPosition;
+
+        if (locked)
+        {
+            // Cache current position if no explicit lock target
+            if (lockPosition == null)
+                heldLockPosition = transform.position;
+        }
+    }
+
+    // Public API to control vertical cap at runtime
+    public void SetMaxYEnabled(bool enabled)
+    {
+        useMaxY = enabled;
+    }
+
+    public void SetMaxY(float value)
+    {
+        maxY = value;
     }
 
     // Multi-collider confine plus soft edge handling on X to reduce visible void and magnet feel.
@@ -100,6 +158,9 @@ public class CameraFollow : MonoBehaviour
             baseY = ClampWithDeadzone(desired.y, minYClamp, maxYClamp, 0f);
         else
             baseY = minYClamp <= maxYClamp ? Mathf.Min(Mathf.Max(desired.y, minY), maxYClamp) : Mathf.Max(desired.y, minY);
+
+        // Apply user maxY cap after base Y computed (keeps camera from rising too high even inside bounds)
+        if (useMaxY) baseY = Mathf.Min(baseY, maxY);
 
         // Soft edge blend on X: when within softEdgeWidth of either side, bias inward and reduce centering
         float x = ApplySoftEdge(desired.x, baseX, minXClamp, maxXClamp);
@@ -174,7 +235,14 @@ public class CameraFollow : MonoBehaviour
 
             // Compute how much clamping would be needed
             float clampedX = Mathf.Clamp(desired.x, minXClamp, maxXClamp);
-            float clampedY = Mathf.Clamp(desired.y, clampYToBounds ? minYClamp : Mathf.Max(minY, float.MinValue), clampYToBounds ? maxYClamp : maxYClamp);
+
+            float lowerY = clampYToBounds ? minYClamp : Mathf.Max(minY, float.MinValue);
+            float upperY = clampYToBounds ? maxYClamp : maxYClamp;
+
+            // Respect user maxY in scoring too
+            if (useMaxY) upperY = Mathf.Min(upperY, maxY);
+
+            float clampedY = Mathf.Clamp(desired.y, lowerY, upperY);
 
             float sqr = (new Vector2(clampedX, clampedY) - new Vector2(desired.x, desired.y)).sqrMagnitude;
             if (sqr < bestSqrDist)

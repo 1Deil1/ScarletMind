@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 public class PlayerControlls : MonoBehaviour
 {
@@ -114,7 +115,16 @@ public class PlayerControlls : MonoBehaviour
 
     [Header("Sanity Rewards")]
     [Tooltip("Sanity gained per damage point dealt to enemies.")]
-    [SerializeField] private int sanityPerDamagePoint = 5;
+    [SerializeField] private int sanityPerDamagePoint = 5; // <-- ensure this exists
+
+    // Game Over / Ending
+    [Header("Game Over")]
+    [Tooltip("Scene to load when sanity reaches zero.")]
+    [SerializeField] private string endingSceneName = "Ending";
+    [Tooltip("Optional delay before switching to the ending scene.")]
+    [SerializeField] private float gameOverDelay = 0.75f;
+
+    private bool isGameOverTriggered = false;
 
     [Header("Hub Sanity")]
     [SerializeField] private string hubSceneName = "Hub";
@@ -144,6 +154,25 @@ public class PlayerControlls : MonoBehaviour
     // Runtime
     private bool isSliding = false;
     private float lastSlideTime = -999f;
+
+    // --- Audio - Player SFX ---
+    [Header("Audio - Player SFX")]
+    [SerializeField] private AudioClip jumpSfx;
+    [SerializeField] private AudioClip slideSfx;
+    [SerializeField] private AudioClip attackHitSfx;
+    [SerializeField] private AudioClip attackMissSfx;
+    [SerializeField] private AudioClip dashSfx; // NEW
+
+    [Header("Footsteps")]
+    [SerializeField] private AudioClip[] stepDefault;
+    [SerializeField] private AudioClip[] stepStone;
+    [SerializeField] private AudioClip[] stepWood;
+    [SerializeField] private float baseStepInterval = 0.42f;
+    [SerializeField] private float minStepInterval = 0.24f;
+    [SerializeField] private float stepVolume = 0.8f;
+    [SerializeField] private Vector2 stepPitchRange = new Vector2(0.96f, 1.04f);
+
+    private float nextPlayerStepTime = 0f;
 
     // ---- Unity lifecycle ----
     private void Awake()
@@ -282,6 +311,9 @@ public class PlayerControlls : MonoBehaviour
 
     private void HandleJumpInput()
     {
+        // Hard gate in Hub
+        if (SkinSwitcher.DisableJump) return;
+
         if (Time.time < actionLockedUntil) return;
         if (Input.GetButtonDown("Jump") && jumpsLeft > 0 && !isDashing && !isPostDashHang)
         {
@@ -293,6 +325,9 @@ public class PlayerControlls : MonoBehaviour
 
     private void HandleDashInput()
     {
+        // Hard gate in Hub
+        if (SkinSwitcher.DisableDash) return;
+
         bool canDash = !isDashing && Time.time >= lastDashTime + dashCooldown && Time.time >= actionLockedUntil;
         if (canDash && Input.GetKeyDown(dashKey))
             StartCoroutine(Dash());
@@ -300,6 +335,9 @@ public class PlayerControlls : MonoBehaviour
 
     private void HandleAttackInput()
     {
+        // Hard gate in Hub
+        if (SkinSwitcher.DisableAttack) return;
+
         bool canAttack = Time.time >= lastAttackTime + attackCooldown && Time.time >= actionLockedUntil;
         if (canAttack && (Input.GetKeyDown(attackKey) || Input.GetButtonDown("Fire1")))
             Attack();
@@ -307,10 +345,13 @@ public class PlayerControlls : MonoBehaviour
 
     private void HandleSlideInput()
     {
+        // Hard gate in Hub
+        if (SkinSwitcher.DisableSlide) return;
+
         if (!isGrounded) return;
         if (isSliding || isDashing || isPostDashHang) return;
         if (Time.time < lastSlideTime + slideCooldown) return;
-        if (Mathf.Abs(xAxis) <= runInputThreshold) return; // must be moving
+        if (Mathf.Abs(xAxis) <= runInputThreshold) return;
         if (!Input.GetKeyDown(slideKey)) return;
 
         StartCoroutine(Slide());
@@ -321,7 +362,11 @@ public class PlayerControlls : MonoBehaviour
     {
         if (anim != null)
         {
-            bool isRunning = !isDashing && !isSliding && !isPostDashHang && isGrounded && Mathf.Abs(xAxis) > runInputThreshold;
+            // Allow walk animation even if not grounded when Hub skin is active
+            bool allowRunWithoutGround = SkinSwitcher.HubSkinActive;
+            bool isRunning = !isDashing && !isSliding && !isPostDashHang
+                             && (allowRunWithoutGround || isGrounded)
+                             && Mathf.Abs(xAxis) > runInputThreshold;
             anim.SetBool("running", isRunning);
         }
 
@@ -332,24 +377,32 @@ public class PlayerControlls : MonoBehaviour
         }
 
         // Do not apply normal movement while dashing, sliding, or during post-dash hang mid-air
-        if (isDashing || isSliding || (isPostDashHang && !isGrounded)) return;
+        if (isDashing || isSliding || (isPostDashHang && !isGrounded))
+        {
+            HandleFootsteps(); // keep cadence cooldown consistent
+            return;
+        }
 
         float targetX = xAxis * walkSpeed;
 
         if (isGrounded)
         {
             rb.velocity = new Vector2(targetX, rb.velocity.y);
-            return;
+        }
+        else
+        {
+            float airTargetX = xAxis * walkSpeed * airControlMultiplier;
+            float currentX = rb.velocity.x;
+            float accel = (Mathf.Abs(xAxis) > 0.01f) ? airAcceleration : airAcceleration * airDecelerationMultiplier;
+
+            if (Mathf.Abs(xAxis) > 0.01f && currentX * airTargetX < 0f) accel *= airTurnMultiplier;
+
+            float newX = Mathf.MoveTowards(currentX, airTargetX, accel * Time.fixedDeltaTime);
+            rb.velocity = new Vector2(newX, rb.velocity.y);
         }
 
-        float airTargetX = xAxis * walkSpeed * airControlMultiplier;
-        float currentX = rb.velocity.x;
-        float accel = (Mathf.Abs(xAxis) > 0.01f) ? airAcceleration : airAcceleration * airDecelerationMultiplier;
-
-        if (Mathf.Abs(xAxis) > 0.01f && currentX * airTargetX < 0f) accel *= airTurnMultiplier;
-
-        float newX = Mathf.MoveTowards(currentX, airTargetX, accel * Time.fixedDeltaTime);
-        rb.velocity = new Vector2(newX, rb.velocity.y);
+        // Footsteps last
+        HandleFootsteps();
     }
 
     private void SetFacing(bool faceRight)
@@ -387,6 +440,9 @@ public class PlayerControlls : MonoBehaviour
             if (anim.HasState(0, hash))
                 anim.Play(hash, 0, 0f);
         }
+
+        // --- Audio: Jump
+        if (jumpSfx != null) AudioManager.PlaySfxAt(jumpSfx, transform.position, 1f);
     }
 
     private IEnumerator Dash()
@@ -398,6 +454,10 @@ public class PlayerControlls : MonoBehaviour
         isDashing = true;
         lastDashTime = Time.time;
         actionLockedUntil = Time.time + actionLockDuration;
+
+        // Audio: Dash (2D for reliable volume)
+        if (dashSfx != null)
+            AudioManager.PlaySfx2D(dashSfx, 1f);
 
         float dir = DetermineDashDirection();
         float dashEnd = Time.time + dashDuration;
@@ -524,6 +584,11 @@ public class PlayerControlls : MonoBehaviour
             RestoreSanity(totalDamageDealt * sanityPerDamagePoint);
 
         actionLockedUntil = Time.time + attackDuration;
+
+        // --- Audio: Attack
+        // Choose hit or miss sound based on damage dealt
+        var atkClip = (totalDamageDealt > 0) ? attackHitSfx : attackMissSfx;
+        if (atkClip != null) AudioManager.PlaySfxAt(atkClip, transform.position, 1f);
     }
 
     private Vector2 DetermineAttackDirection()
@@ -570,16 +635,16 @@ public class PlayerControlls : MonoBehaviour
         UpdateSanityUI();
         PersistSanity();
         OnSanityChanged?.Invoke(sanity, maxSanity);
+
+        // Check for game over via SetSanity too (covers direct SetSanity calls)
+        if (sanity <= 0) TriggerGameOver();
     }
 
     public void TakeSanityDamage(int amount)
     {
         if (amount <= 0) return;
         SetSanity(sanity - amount);
-        if (sanity <= 0)
-        {
-            // TODO: handle zero sanity (death, game over, etc.)
-        }
+        // Game Over handled inside SetSanity
     }
 
     public void RestoreSanity(int amount)
@@ -739,6 +804,10 @@ public class PlayerControlls : MonoBehaviour
     {
         isSliding = true;
         lastSlideTime = Time.time;
+
+        // Play slide SFX once at slide start
+        if (slideSfx != null)
+            AudioManager.PlaySfxAt(slideSfx, transform.position, 1f);
 
         if (anim != null)
         {
@@ -941,6 +1010,88 @@ public class PlayerControlls : MonoBehaviour
             // stop horizontal motion
             if (rb != null) rb.velocity = new Vector2(0f, rb.velocity.y);
             if (anim != null) anim.SetBool("running", false);
+        }
+    }
+
+    // ---- Game Over ----
+    private void TriggerGameOver()
+    {
+        if (isGameOverTriggered) return; // guard against re-entry
+        isGameOverTriggered = true;
+
+        // Lock input and stop horizontal motion
+        SetInputLocked(true);
+
+        // Optional: stop player movement completely
+        if (rb != null) rb.velocity = Vector2.zero;
+
+        // Optional: play a death/KO animation if you have one
+        // CrossFadeIfExists("Death", 0.05f, 0);
+
+        // Delay then switch to ending scene
+        StartCoroutine(LoadEndingAfterDelay());
+    }
+
+    private IEnumerator LoadEndingAfterDelay()
+    {
+        if (gameOverDelay > 0f)
+            yield return new WaitForSeconds(gameOverDelay);
+
+        if (!string.IsNullOrEmpty(endingSceneName))
+        {
+            // Clear any spawn overrides to ensure Ending loads as authored
+            SceneSpawnState.NextSpawnId = null;
+
+            SceneManager.LoadScene(endingSceneName, LoadSceneMode.Single);
+        }
+        else
+        {
+            Debug.LogWarning("Ending scene name is empty. Set 'endingSceneName' in PlayerControlls.");
+        }
+    }
+
+    private void HandleFootsteps()
+    {
+        // Footsteps when grounded and moving (not dashing/sliding/post-dash)
+        if (isGrounded && !isDashing && !isSliding && !isPostDashHang && Mathf.Abs(xAxis) > 0.01f)
+        {
+            float speed = Mathf.Abs(rb.velocity.x);
+            float t = Mathf.InverseLerp(0.1f, walkSpeed, speed);
+            float interval = Mathf.Lerp(baseStepInterval, minStepInterval, t);
+
+            if (Time.time >= nextPlayerStepTime && speed > 0.05f)
+            {
+                FootstepType type = FootstepType.Default; 
+                float volMul = 1f;
+
+                if (groundCheck != null)
+                {
+                    var c = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+                    if (c != null)
+                    {
+                        var surf = c.GetComponent<FootstepSurface>() ?? c.GetComponentInParent<FootstepSurface>();
+                        if (surf != null) { type = surf.type; volMul = surf.volumeMul; }
+                    }
+                }
+
+                AudioClip[] bank = stepDefault;
+                if (type == FootstepType.Stone && stepStone != null && stepStone.Length > 0) bank = stepStone;
+                else if (type == FootstepType.Wood && stepWood != null && stepWood.Length > 0) bank = stepWood;
+
+                if (bank != null && bank.Length > 0)
+                {
+                    var s = bank[Random.Range(0, bank.Length)];
+                    float p = Random.Range(stepPitchRange.x, stepPitchRange.y);
+                    AudioManager.PlaySfxAt(s, transform.position, stepVolume * volMul, p);
+                }
+
+                nextPlayerStepTime = Time.time + interval;
+            }
+        }
+        else
+        {
+            // small hysteresis so we don't spam when starting/stopping
+            nextPlayerStepTime = Mathf.Max(nextPlayerStepTime, Time.time + 0.05f);
         }
     }
 }

@@ -26,4 +26,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Hub_ROOM.unity
     guid: 7824b39d8870e404c9f58a73c5ccb97d
+  - enabled: 1
+    path: Assets/Scenes/Comic.unity
+    guid: b1b90a4bbd726504eb338066a77b8eda
   m_configObjects: {}

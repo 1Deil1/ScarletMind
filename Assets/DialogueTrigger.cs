@@ -29,9 +29,15 @@ public class DialogueTrigger : MonoBehaviour
     [SerializeField] private string speakerName = "";
     public string SpeakerName => speakerName;
 
+    [Header("Re-trigger protection")]
+    [Tooltip("How long to ignore the interact key after a dialogue ends (seconds).")]
+    [SerializeField] private float retriggerCooldown = 0.15f;
+
     private bool playerInRange = false;
     private bool dialogueCompleted = false; // NEW: track completion
     private ScenePortal portal;             // NEW: cached portal reference
+
+    private float blockInputUntil = 0f;     // NEW: time until which E is ignored
 
     private void Start()
     {
@@ -80,6 +86,9 @@ public class DialogueTrigger : MonoBehaviour
         // Dialogue in progress? Don't start new or teleport during dialog.
         if (DialogueManagerIsActive()) return;
 
+        // Respect cooldown after dialogue end to prevent immediate restart
+        if (Time.time < blockInputUntil) return;
+
         // E: start dialogue
         if (Input.GetKeyDown(interactKey))
         {
@@ -98,6 +107,9 @@ public class DialogueTrigger : MonoBehaviour
 
     private void TryStartDialogue()
     {
+        // Block if still within cooldown window
+        if (Time.time < blockInputUntil) return;
+
         if (promptUI != null) promptUI.SetActive(false);
         if (enterPromptUI != null) enterPromptUI.SetActive(false);
 
@@ -137,6 +149,9 @@ public class DialogueTrigger : MonoBehaviour
     public void OnDialogueEnded()
     {
         dialogueCompleted = true;
+
+        // Start short cooldown to avoid instant re-trigger from the same key press
+        blockInputUntil = Time.time + retriggerCooldown;
 
         // Restore the appropriate prompt(s)
         if (playerInRange)

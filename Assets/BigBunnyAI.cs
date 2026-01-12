@@ -58,6 +58,12 @@ public class BigBunnyAI : MonoBehaviour
     [SerializeField] private Color hopColor = new Color(0.3f, 0.7f, 0.4f, 1f);
     [SerializeField] private Color attackColor = new Color(0.8f, 0.2f, 0.2f, 1f);
 
+    [Header("Audio - Enemy SFX")]
+    [SerializeField] private AudioClip enemyAttackHitSfx;
+    [SerializeField] private AudioClip enemyAttackMissSfx;
+    [Tooltip("Sound played when the bunny starts a hop.")]
+    [SerializeField] private AudioClip bunnyJumpSfx;
+
     private Rigidbody2D rb;
     private Collider2D col;
     private SpriteRenderer sr;
@@ -172,12 +178,15 @@ public class BigBunnyAI : MonoBehaviour
         // Small pre-hop settle to avoid instantly stacking forces this frame
         yield return new WaitForFixedUpdate();
 
-        // Start hop
+        // Start hop impulse + SFX
         Vector2 v = rb.velocity;
         v.x = desiredHopDir * hopHorizontalSpeed;
         v.y = 0f;
         rb.velocity = v;
         rb.AddForce(Vector2.up * hopForceY, ForceMode2D.Impulse);
+
+        if (bunnyJumpSfx != null)
+            AudioManager.PlaySfxAt(bunnyJumpSfx, transform.position, 1f);
 
         // Remain in Hopping until we land (handled in FixedUpdate)
         // Safety timeout in case of odd collisions
@@ -210,19 +219,15 @@ public class BigBunnyAI : MonoBehaviour
         lastAttackTime = Time.time;
         yield return new WaitForSeconds(attackWindup);
 
+        bool hit = false;
         if (player != null && InAttackRange())
         {
-            if (PlayerControlls.Instance != null)
-            {
-                PlayerControlls.Instance.TakeSanityDamage(sanityDamage);
-            }
-            else
-            {
-                var taggedPlayer = GameObject.FindWithTag("Player");
-                if (taggedPlayer != null)
-                    Debug.Log("BigBunny hit the player (no PlayerControlls.Instance found).");
-            }
+            hit = true;
+            if (PlayerControlls.Instance != null) PlayerControlls.Instance.TakeSanityDamage(sanityDamage);
+            else { var taggedPlayer = GameObject.FindWithTag("Player"); if (taggedPlayer != null) Debug.Log("BigBunny hit the player (no PlayerControlls.Instance found)."); }
         }
+        var clip = hit ? enemyAttackHitSfx : enemyAttackMissSfx;
+        if (clip != null) AudioManager.PlaySfxAt(clip, transform.position, 1f);
 
         // Finish cooldown before resuming chase
         float remaining = Mathf.Max(0f, (lastAttackTime + attackCooldown) - Time.time);

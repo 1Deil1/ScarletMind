@@ -12,8 +12,7 @@ public class StartMenuController : MonoBehaviour
     // Call from your Start button OnClick()
     public void OnStartClick()
     {
-        // Use the scene name (without ".unity") or the build index.
-        SceneManager.LoadScene("Hub");
+        SceneManager.LoadScene("Comic");
     }
 
     // Call from a Quit button OnClick() or wherever you need to exit the game
