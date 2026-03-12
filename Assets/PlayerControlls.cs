@@ -19,6 +19,12 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private float walkSpeed = 5f;
     [SerializeField] private bool enableRigidbodyInterpolation = true;
 
+    [Header("Scene Walk Speed Overrides")]
+    [SerializeField] private bool useSceneWalkSpeedOverrides = true;
+    [SerializeField] private SceneWalkSpeedOverride[] walkSpeedOverrides;
+
+    private float currentWalkSpeed;
+
     private float xAxis;
     private float lastMoveDir = 1f;
     private bool isFacingRight = true;
@@ -161,7 +167,13 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private AudioClip slideSfx;
     [SerializeField] private AudioClip attackHitSfx;
     [SerializeField] private AudioClip attackMissSfx;
-    [SerializeField] private AudioClip dashSfx; // NEW
+    [SerializeField] private AudioClip dashSfx;
+
+    [Range(0f, 1f)] [SerializeField] private float jumpSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float slideSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float attackHitSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float attackMissSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float dashSfxVolume = 1f;
 
     [Header("Footsteps")]
     [SerializeField] private AudioClip[] stepDefault;
@@ -222,6 +234,9 @@ public class PlayerControlls : MonoBehaviour
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
 
+        currentWalkSpeed = walkSpeed;
+        ApplySceneWalkSpeed(SceneManager.GetActiveScene().name);
+
         sanity = Mathf.Clamp(sanity, 0, maxSanity);
         EnsureSanityUI();
         UpdateSanityUI();
@@ -259,6 +274,8 @@ public class PlayerControlls : MonoBehaviour
     {
         EnsureSanityUI();
         UpdateSanityUI();
+
+        ApplySceneWalkSpeed(scene.name);
 
         if (scene.name == hubSceneName)
         {
@@ -383,7 +400,7 @@ public class PlayerControlls : MonoBehaviour
             return;
         }
 
-        float targetX = xAxis * walkSpeed;
+        float targetX = xAxis * currentWalkSpeed;
 
         if (isGrounded)
         {
@@ -391,7 +408,7 @@ public class PlayerControlls : MonoBehaviour
         }
         else
         {
-            float airTargetX = xAxis * walkSpeed * airControlMultiplier;
+            float airTargetX = xAxis * currentWalkSpeed * airControlMultiplier;
             float currentX = rb.velocity.x;
             float accel = (Mathf.Abs(xAxis) > 0.01f) ? airAcceleration : airAcceleration * airDecelerationMultiplier;
 
@@ -442,7 +459,7 @@ public class PlayerControlls : MonoBehaviour
         }
 
         // --- Audio: Jump
-        if (jumpSfx != null) AudioManager.PlaySfxAt(jumpSfx, transform.position, 1f);
+        if (jumpSfx != null) AudioManager.PlaySfxAt(jumpSfx, transform.position, jumpSfxVolume);
     }
 
     private IEnumerator Dash()
@@ -457,7 +474,7 @@ public class PlayerControlls : MonoBehaviour
 
         // Audio: Dash (2D for reliable volume)
         if (dashSfx != null)
-            AudioManager.PlaySfx2D(dashSfx, 1f);
+            AudioManager.PlaySfx2D(dashSfx, dashSfxVolume);
 
         float dir = DetermineDashDirection();
         float dashEnd = Time.time + dashDuration;
@@ -588,7 +605,8 @@ public class PlayerControlls : MonoBehaviour
         // --- Audio: Attack
         // Choose hit or miss sound based on damage dealt
         var atkClip = (totalDamageDealt > 0) ? attackHitSfx : attackMissSfx;
-        if (atkClip != null) AudioManager.PlaySfxAt(atkClip, transform.position, 1f);
+        float atkVolume = (totalDamageDealt > 0) ? attackHitSfxVolume : attackMissSfxVolume;
+        if (atkClip != null) AudioManager.PlaySfxAt(atkClip, transform.position, atkVolume);
     }
 
     private Vector2 DetermineAttackDirection()
@@ -807,7 +825,7 @@ public class PlayerControlls : MonoBehaviour
 
         // Play slide SFX once at slide start
         if (slideSfx != null)
-            AudioManager.PlaySfxAt(slideSfx, transform.position, 1f);
+            AudioManager.PlaySfxAt(slideSfx, transform.position, slideSfxVolume);
 
         if (anim != null)
         {
@@ -1056,7 +1074,7 @@ public class PlayerControlls : MonoBehaviour
         if (isGrounded && !isDashing && !isSliding && !isPostDashHang && Mathf.Abs(xAxis) > 0.01f)
         {
             float speed = Mathf.Abs(rb.velocity.x);
-            float t = Mathf.InverseLerp(0.1f, walkSpeed, speed);
+            float t = Mathf.InverseLerp(0.1f, currentWalkSpeed, speed);
             float interval = Mathf.Lerp(baseStepInterval, minStepInterval, t);
 
             if (Time.time >= nextPlayerStepTime && speed > 0.05f)
@@ -1094,4 +1112,30 @@ public class PlayerControlls : MonoBehaviour
             nextPlayerStepTime = Mathf.Max(nextPlayerStepTime, Time.time + 0.05f);
         }
     }
+
+    private void ApplySceneWalkSpeed(string sceneName)
+    {
+        currentWalkSpeed = walkSpeed;
+
+        if (!useSceneWalkSpeedOverrides || walkSpeedOverrides == null) return;
+
+        for (int i = 0; i < walkSpeedOverrides.Length; i++)
+        {
+            var entry = walkSpeedOverrides[i];
+            if (entry != null && !string.IsNullOrEmpty(entry.sceneName) && entry.sceneName == sceneName)
+            {
+                currentWalkSpeed = entry.walkSpeed;
+                return;
+            }
+        }
+    }
+
+    public float CurrentWalkSpeed => currentWalkSpeed;
+}
+
+[System.Serializable]
+public class SceneWalkSpeedOverride
+{
+    public string sceneName;
+    public float walkSpeed = 5f;
 }

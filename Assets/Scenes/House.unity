@@ -15364,6 +15364,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   walkSpeed: 10
   enableRigidbodyInterpolation: 1
+  useSceneWalkSpeedOverrides: 1
+  walkSpeedOverrides: []
   airAcceleration: 10
   airControlMultiplier: 0.75
   airDecelerationMultiplier: 0
@@ -15432,12 +15434,17 @@ MonoBehaviour:
   attackHitSfx: {fileID: 8300000, guid: af9198d8e78c94b4083dd4c54d42e676, type: 3}
   attackMissSfx: {fileID: 8300000, guid: 0bfa4da500d10c64fa0cbea4032309a3, type: 3}
   dashSfx: {fileID: 8300000, guid: 175cd302fbdd3f742b44ea90c2a0ec8a, type: 3}
+  jumpSfxVolume: 0.227
+  slideSfxVolume: 0.762
+  attackHitSfxVolume: 1
+  attackMissSfxVolume: 1
+  dashSfxVolume: 0.407
   stepDefault: []
   stepStone: []
   stepWood: []
-  baseStepInterval: 0.42
-  minStepInterval: 0.24
-  stepVolume: 0.8
+  baseStepInterval: 0.75
+  minStepInterval: 0.3
+  stepVolume: 0.2
   stepPitchRange: {x: 0.96, y: 1.04}
   slidingBoolParameter: 
   jumpUpStateName: JumpUp
@@ -17571,6 +17578,11 @@ MonoBehaviour:
   offset: {x: 0, y: 2.1, z: -3}
   smoothTime: 0.5
   maxSpeed: 100
+  baseOrthographicSize: 5
+  zoomMultiplier: 1
+  zoomSmoothTime: 0.2
+  minOrthographicSize: 2
+  maxOrthographicSize: 12
   minY: -0.5
   useMaxY: 1
   maxY: 0.75
@@ -17581,6 +17593,8 @@ MonoBehaviour:
   cameraBoundsList: []
   edgePadding: {x: 0.5, y: 0.5}
   clampYToBounds: 0
+  boundsSwitchPadding: 1
+  boundsBlendTime: 0.35
   softEdgeWidth: 2
   deadzoneX: 0.75
   interiorBias: 0.5
