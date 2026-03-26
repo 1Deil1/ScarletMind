@@ -14,8 +14,14 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private Button             nextButton;
     [SerializeField] private Button             closeButton;
     [SerializeField] private TextMeshProUGUI    speakerNameText;
-    [SerializeField] private Image              leftPortraitImage;
-    [SerializeField] private Image              rightPortraitImage;
+    [Tooltip("Drag the PortraitLeft GameObject here.")]
+    [SerializeField] private GameObject         leftPortraitObject;
+    [Tooltip("Drag the PortraitRight GameObject here.")]
+    [SerializeField] private GameObject         rightPortraitObject;
+
+    // Resolved at runtime from the GameObjects above
+    private Image leftPortraitImage;
+    private Image rightPortraitImage;
 
     [Header("Input")]
     [SerializeField] private KeyCode advanceKey = KeyCode.E;
@@ -74,14 +80,19 @@ public class DialogueManager : MonoBehaviour
 
     private void AutoWireIfNeeded()
     {
+        // Resolve Image components from the dragged-in GameObjects first
+        if (leftPortraitObject  != null && leftPortraitImage  == null)
+            leftPortraitImage  = leftPortraitObject.GetComponent<Image>();
+
+        if (rightPortraitObject != null && rightPortraitImage == null)
+            rightPortraitImage = rightPortraitObject.GetComponent<Image>();
+
         // Find DialoguePanel if not assigned
         if (dialoguePanel == null)
         {
-            // Search children first (DialogueManager is child of canvas)
             foreach (var t in GetComponentsInChildren<Transform>(true))
                 if (t.name == "DialoguePanel") { dialoguePanel = t.gameObject; break; }
 
-            // Then search the whole scene
             if (dialoguePanel == null)
             {
                 foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
@@ -109,7 +120,7 @@ public class DialogueManager : MonoBehaviour
             foreach (var tmp in dialoguePanel.GetComponentsInChildren<TextMeshProUGUI>(true))
                 if (tmp.name.Contains("Speaker")) { speakerNameText = tmp; break; }
 
-        // Portrait search — ONLY fills if not already set in the Inspector
+        // Portrait fallback: search by name if GameObjects were not dragged in
         if (leftPortraitImage == null || rightPortraitImage == null)
         {
             foreach (var img in dialoguePanel.GetComponentsInChildren<Image>(true))
@@ -122,8 +133,8 @@ public class DialogueManager : MonoBehaviour
         Debug.Log($"[DialogueManager] Wired — " +
                   $"panel={dialoguePanel != null} " +
                   $"text={dialogueText != null} " +
-                  $"left={leftPortraitImage != null} " +
-                  $"right={rightPortraitImage != null}");
+                  $"leftPortrait={leftPortraitImage != null} " +
+                  $"rightPortrait={rightPortraitImage != null}");
     }
 
     private void WireButtons()
