@@ -8,37 +8,46 @@ public class DialogueManager : MonoBehaviour
 {
     public static DialogueManager Instance { get; private set; }
 
-    [Header("UI References")]
-    public GameObject dialoguePanel;
-    public TextMeshProUGUI dialogueText;
-    [SerializeField] private Button nextButton;
-    [SerializeField] private Button closeButton;
-    [SerializeField] private TextMeshProUGUI speakerNameText;
+    [Header("UI References — drag these in from the Inspector")]
+    public GameObject        dialoguePanel;
+    public TextMeshProUGUI   dialogueText;
+    [SerializeField] private Button             nextButton;
+    [SerializeField] private Button             closeButton;
+    [SerializeField] private TextMeshProUGUI    speakerNameText;
+    [SerializeField] private Image              leftPortraitImage;
+    [SerializeField] private Image              rightPortraitImage;
 
     [Header("Input")]
     [SerializeField] private KeyCode advanceKey = KeyCode.E;
-    [SerializeField] private KeyCode closeKey = KeyCode.Escape;
+    [SerializeField] private KeyCode closeKey   = KeyCode.Escape;
 
     [Header("Typewriter")]
     [SerializeField] private float charsPerSecond = 45f;
-    [SerializeField] private bool useTypewriter = true;
+    [SerializeField] private bool  useTypewriter  = true;
 
-    private DialogueLine[] lines;
-    private int index;
-    private DialogueTrigger currentTrigger;
-    public bool IsActive { get; private set; }
+    private DialogueLine[]   lines;
+    private int              index;
+    private DialogueTrigger  currentTrigger;
+    public  bool             IsActive { get; private set; }
 
     private Coroutine typeCoroutine;
-    private bool typing;
-    private string currentFullLine;
+    private bool      typing;
+    private string    currentFullLine;
+
+    private static readonly Color kHidden  = new Color(1f, 1f, 1f, 0f);
+    private static readonly Color kVisible = new Color(1f, 1f, 1f, 1f);
+
+    // ?? Unity messages ????????????????????????????????????????????
 
     private void Awake()
     {
-        // Scene-local singleton (no persistence)
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        // NOT DontDestroyOnLoad — scene-local as requested
 
-        EnsureUIRefs();
+        // If fields were not dragged in, try to find them automatically as fallback
+        AutoWireIfNeeded();
+
         HidePanel();
         WireButtons();
         SetSpeakerName(null);
@@ -46,98 +55,75 @@ public class DialogueManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        // If a scene changes while dialogue is up, restore input
         if (IsActive) PlayerControlls.Instance?.SetInputLocked(false);
         if (Instance == this) Instance = null;
     }
 
-    private void OnValidate()
+    private void Update()
     {
-        EnsureUIRefs();
-    }
-
-    private void EnsureUIRefs()
-    {
-        // First: try children (recommended: keep DialogueCanvas under this object)
-        if (!TryWireFromChildren())
+        if (!IsActive) return;
+        if (Input.GetKeyDown(advanceKey))
         {
-            // Fallback: search active scene roots for an object named "DialoguePanel"
-            TryWireFromActiveScene();
+            if (typing) CompleteTypewriter();
+            else        DisplayNextSentence();
         }
+        if (Input.GetKeyDown(closeKey)) EndDialogue();
     }
 
-    private bool TryWireFromChildren()
+    // ?? Auto-wire fallback (only fills slots that are still null) ?
+
+    private void AutoWireIfNeeded()
     {
-        bool wired = false;
+        // Find DialoguePanel if not assigned
+        if (dialoguePanel == null)
+        {
+            // Search children first (DialogueManager is child of canvas)
+            foreach (var t in GetComponentsInChildren<Transform>(true))
+                if (t.name == "DialoguePanel") { dialoguePanel = t.gameObject; break; }
+
+            // Then search the whole scene
+            if (dialoguePanel == null)
+            {
+                foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+                    foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                        if (t.name == "DialoguePanel") { dialoguePanel = t.gameObject; break; }
+            }
+        }
 
         if (dialoguePanel == null)
         {
-            var panels = GetComponentsInChildren<Transform>(true);
-            foreach (var t in panels)
-                if (t.name.Equals("DialoguePanel")) { dialoguePanel = t.gameObject; break; }
+            Debug.LogWarning("[DialogueManager] Could not find 'DialoguePanel'. Drag it into the Inspector.");
+            return;
         }
 
-        if (dialoguePanel != null)
-        {
-            if (dialogueText == null)
-                dialogueText = dialoguePanel.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (dialogueText == null)
+            dialogueText = dialoguePanel.GetComponentInChildren<TextMeshProUGUI>(true);
 
-            if (nextButton == null || closeButton == null || speakerNameText == null)
+        foreach (var b in dialoguePanel.GetComponentsInChildren<Button>(true))
+        {
+            if (nextButton  == null && b.name.Contains("Next"))  nextButton  = b;
+            if (closeButton == null && b.name.Contains("Close")) closeButton = b;
+        }
+
+        if (speakerNameText == null)
+            foreach (var tmp in dialoguePanel.GetComponentsInChildren<TextMeshProUGUI>(true))
+                if (tmp.name.Contains("Speaker")) { speakerNameText = tmp; break; }
+
+        // Portrait search — ONLY fills if not already set in the Inspector
+        if (leftPortraitImage == null || rightPortraitImage == null)
+        {
+            foreach (var img in dialoguePanel.GetComponentsInChildren<Image>(true))
             {
-                var buttons = dialoguePanel.GetComponentsInChildren<Button>(true);
-                foreach (var b in buttons)
-                {
-                    if (b.name.Contains("Next")) nextButton = b;
-                    else if (b.name.Contains("Close")) closeButton = b;
-                }
-
-                if (speakerNameText == null)
-                {
-                    var tmps = dialoguePanel.GetComponentsInChildren<TextMeshProUGUI>(true);
-                    foreach (var tmp in tmps)
-                        if (tmp.name.Contains("Speaker")) { speakerNameText = tmp; break; }
-                }
+                if (leftPortraitImage  == null && img.name == "PortraitLeft")  leftPortraitImage  = img;
+                if (rightPortraitImage == null && img.name == "PortraitRight") rightPortraitImage = img;
             }
-
-            wired = (dialogueText != null);
         }
 
-        return wired;
-    }
-
-    private void TryWireFromActiveScene()
-    {
-        GameObject foundPanel = null;
-        var roots = SceneManager.GetActiveScene().GetRootGameObjects();
-        foreach (var root in roots)
-        {
-            var tfs = root.GetComponentsInChildren<Transform>(true);
-            foreach (var t in tfs)
-            {
-                if (t.name.Equals("DialoguePanel")) { foundPanel = t.gameObject; break; }
-            }
-            if (foundPanel != null) break;
-        }
-
-        if (foundPanel == null) return;
-
-        dialoguePanel = foundPanel;
-        dialogueText = dialoguePanel.GetComponentInChildren<TextMeshProUGUI>(true);
-
-        nextButton = null;
-        closeButton = null;
-        speakerNameText = null;
-
-        var buttons = dialoguePanel.GetComponentsInChildren<Button>(true);
-        foreach (var b in buttons)
-        {
-            if (b.name.Contains("Next")) nextButton = b;
-            else if (b.name.Contains("Close")) closeButton = b;
-        }
-
-        var tmps = dialoguePanel.GetComponentsInChildren<TextMeshProUGUI>(true);
-        foreach (var tmp in tmps)
-            if (tmp.name.Contains("Speaker")) { speakerNameText = tmp; break; }
+        Debug.Log($"[DialogueManager] Wired — " +
+                  $"panel={dialoguePanel != null} " +
+                  $"text={dialogueText != null} " +
+                  $"left={leftPortraitImage != null} " +
+                  $"right={rightPortraitImage != null}");
     }
 
     private void WireButtons()
@@ -154,54 +140,72 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
+    // ?? Panel show / hide ?????????????????????????????????????????
+
     private void HidePanel()
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
-        IsActive = false;
-        typing = false;
+        SetPortraitSprite(leftPortraitImage,  null);
+        SetPortraitSprite(rightPortraitImage, null);
+        IsActive        = false;
+        typing          = false;
         currentFullLine = null;
     }
 
-    private void Update()
-    {
-        if (!IsActive) return;
+    // ?? Public API ????????????????????????????????????????????????
 
-        if (Input.GetKeyDown(advanceKey))
-        {
-            if (typing) CompleteTypewriter();
-            else DisplayNextSentence();
-        }
-        if (Input.GetKeyDown(closeKey)) EndDialogue();
-    }
-
-    // Start dialogue: now takes DialogueLine[]
     public void StartDialogue(DialogueLine[] dialogueLines, DialogueTrigger trigger)
     {
         if (dialogueLines == null || dialogueLines.Length == 0) return;
 
-        EnsureUIRefs();
+        // Last-chance wire in case Awake ran before the scene was fully loaded
+        AutoWireIfNeeded();
         WireButtons();
 
-        // Guard: UI must exist in this scene
         if (dialoguePanel == null || dialogueText == null)
         {
-            Debug.LogWarning("[DialogueManager] UI not wired. Place a 'DialoguePanel' in this scene, with TMP text and Next/Close buttons.");
+            Debug.LogWarning("[DialogueManager] Cannot start dialogue — UI refs missing. " +
+                             "Drag DialoguePanel, DialogueText, PortraitLeft and PortraitRight " +
+                             "into the DialogueManager Inspector slots.");
             return;
         }
 
-        HidePanel(); // clean state
+        HidePanel();
 
-        lines = dialogueLines;
-        index = 0;
+        lines          = dialogueLines;
+        index          = 0;
         currentTrigger = trigger;
 
         dialoguePanel.SetActive(true);
         IsActive = true;
 
         PlayerControlls.Instance?.SetInputLocked(true);
-
         ShowCurrentSentence();
     }
+
+    public void DisplayNextSentence()
+    {
+        if (!IsActive || lines == null) return;
+        if (typing) { CompleteTypewriter(); return; }
+        index++;
+        if (index < lines.Length) ShowCurrentSentence();
+        else                      EndDialogue();
+    }
+
+    public void EndDialogue()
+    {
+        if (!IsActive) return;
+        HidePanel();
+        PlayerControlls.Instance?.SetInputLocked(false);
+        SetSpeakerName(null);
+        if (currentTrigger != null)
+        {
+            currentTrigger.OnDialogueEnded();
+            currentTrigger = null;
+        }
+    }
+
+    // ?? Sentence display ??????????????????????????????????????????
 
     private void ShowCurrentSentence()
     {
@@ -209,6 +213,8 @@ public class DialogueManager : MonoBehaviour
 
         var line = lines[index];
         SetSpeakerName(string.IsNullOrWhiteSpace(line.speaker) ? null : line.speaker);
+        SetPortraitSprite(leftPortraitImage,  line.leftPortrait);
+        SetPortraitSprite(rightPortraitImage, line.rightPortrait);
 
         currentFullLine = line.text ?? string.Empty;
 
@@ -219,67 +225,33 @@ public class DialogueManager : MonoBehaviour
         }
         else
         {
-            typing = false;
+            typing            = false;
             dialogueText.text = currentFullLine;
         }
     }
 
     private IEnumerator TypeLine(string line)
     {
-        typing = true;
+        typing            = true;
         dialogueText.text = string.Empty;
-        float delay = 1f / charsPerSecond;
+        float delay       = 1f / charsPerSecond;
         foreach (char c in line)
         {
             dialogueText.text += c;
             yield return new WaitForSeconds(delay);
         }
-        typing = false;
+        typing        = false;
         typeCoroutine = null;
     }
 
     private void CompleteTypewriter()
     {
         typing = false;
-        if (typeCoroutine != null)
-        {
-            StopCoroutine(typeCoroutine);
-            typeCoroutine = null;
-        }
+        if (typeCoroutine != null) { StopCoroutine(typeCoroutine); typeCoroutine = null; }
         dialogueText.text = currentFullLine;
     }
 
-    public void DisplayNextSentence()
-    {
-        if (!IsActive || lines == null) return;
-
-        if (typing) { CompleteTypewriter(); return; }
-
-        index++;
-        if (index < lines.Length)
-        {
-            ShowCurrentSentence();
-        }
-        else
-        {
-            EndDialogue();
-        }
-    }
-
-    public void EndDialogue()
-    {
-        if (!IsActive) return;
-
-        HidePanel();
-        PlayerControlls.Instance?.SetInputLocked(false);
-        SetSpeakerName(null);
-
-        if (currentTrigger != null)
-        {
-            currentTrigger.OnDialogueEnded();
-            currentTrigger = null;
-        }
-    }
+    // ?? Helpers ???????????????????????????????????????????????????
 
     private void SetSpeakerName(string name)
     {
@@ -287,5 +259,16 @@ public class DialogueManager : MonoBehaviour
         bool show = !string.IsNullOrWhiteSpace(name);
         speakerNameText.gameObject.SetActive(show);
         if (show) speakerNameText.text = name;
+    }
+
+    private static void SetPortraitSprite(Image img, Sprite sprite)
+    {
+        if (img == null) return;
+
+        // Always keep the GameObject active — use colour alpha to show/hide
+        if (!img.gameObject.activeSelf) img.gameObject.SetActive(true);
+
+        img.sprite = sprite;
+        img.color  = sprite != null ? kVisible : kHidden;
     }
 }

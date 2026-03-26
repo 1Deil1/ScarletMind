@@ -179,6 +179,8 @@ MonoBehaviour:
   interiorBias: 0.5
   cameraLocked: 1
   lockPosition: {fileID: 0}
+  defaultShakeMagnitude: 0.1
+  defaultShakeDuration: 0.2
 --- !u!114 &139509150
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -792,146 +794,242 @@ MonoBehaviour:
   - speaker: 'DOCTOR:'
     text: "Hi, Maya. My name is Veronika.\r\nI\u2019ve heard that you\u2019ve been
       through something very difficult."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Try to tell me how you\u2019re feeling right now.\r\nIt doesn\u2019t have
       to be precise. Just whatever feels most present in this moment.\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "\u2026 I don\u2019t really know. My head feels like complete chaos\u2026\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Chaos is common when too much builds up at once.\r\nWe don\u2019t have
       to put it in order today. It\u2019s enough if we just look at it together.\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "What we talk about here stays between us.\r\nThe only exception is if
       you were in danger \u2014 then my role would be to protect you.\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "You don\u2019t have to be strong here. Being here is enough."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "My thoughts are really chaotic right now, but I have this urge to go wash
       my hands,\r\nbecause I touched a door handle I don\u2019t know, and there could
       be bacteria on it\u2026\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "I could have touched it differently\u2026 I\u2019m so stupid for not doing
       that\u2026\r"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "I hear how overwhelming that feels.\r\nSomething inside you is trying
       to get certainty \u2014 and it\u2019s doing it in a very forceful way.\r"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Let\u2019s pause for a moment with that thought.\r\nNot the door handle.
       The voice that\u2019s calling you \u201Cstupid.\u201D"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Notice how these thoughts arrive with a lot of pressure.\r\nThey don\u2019t
       speak quietly \u2014 they command and rush you."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "We don\u2019t need to judge them or fix them right now.\r\nIt\u2019s enough
       that you\u2019ve noticed them and that you can say them out loud."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Try to tell me what that thought says would happen if you didn\u2019t
       wash your hands."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "If I don\u2019t wash them, I\u2019ll get sick.\r\nAnd what\u2019s worse
       \u2014 I could infect people I care about.\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "I hear that this isn\u2019t just about you.\r\nIt\u2019s about people
       you care about \u2014 and that\u2019s a very sensitive place for you."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "That thought tells you that if you don\u2019t act immediately, you might
       cause harm.\r\nAnd that creates enormous pressure to always be responsible.\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Let\u2019s pause for a moment.\r\nNot to decide whether the thought is
       true \u2014 but to notice how it treats you.\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "So\u2026 you think I\u2019m right too?\r\nAre you afraid you\u2019ll get
       infected from me?"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: Notice what just happened, Maya.
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "That thought has moved toward me now.\r\nIt\u2019s trying to see whether
       someone else will confirm it \u2014 or deny it."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "I\u2019m not going to answer that question.\r\nNot because you\u2019ve
       done anything wrong \u2014 but because answering it would help that pressure
       grow."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: Instead, tell me what you feel in your body when that question shows up.
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "I feel tightness in my chest, my legs are shaking,\r\nI really want to
       go wash my hands,\r\nand the same sentence keeps repeating in my head over
       and over\u2026\r\n"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "\u201CGo wash your hands or you\u2019ll get infected before it\u2019s
       too late.\u201D"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Alright. Let\u2019s stay with this."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "What you\u2019re describing \u2014 the tightness in your chest, the shaking
       in your legs \u2014 is your body in alarm.\r\nAnd that sentence in your head
       is a command. Not a fact."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "We don\u2019t have to obey it right away.\r\nLet\u2019s just notice how
       strong the pressure is.\r\nTell me, on a scale from zero to ten."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "It\u2019s\u2026 nine out of ten."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Thank you for saying that so clearly.\r\nNine means it\u2019s very strong
       \u2014 but you\u2019re still here with me."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Let\u2019s try something small now.\r\nNot to make the pressure disappear
       \u2014 but to stay with it for a moment."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "If you\u2019re willing, let\u2019s focus on the exhale for a few breaths.\r\nYou
       don\u2019t have to breathe \u201Ccorrectly.\u201D Just notice the air leaving."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: MAYA
     text: "It dropped to eight out of ten\u2026\r\nbut the thoughts are still there."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: Yes. That makes sense.
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Anxiety can decrease \u2014 while the thoughts are still loud.\r\nThat
       doesn\u2019t mean you\u2019re doing anything wrong."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "What matters is this:\r\nYou hear them \u2014 and you\u2019re still sitting
       here."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: 'Has the sentence in your head changed, or is it the same?
 
 '
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "It\u2019s the same\u2026\r\nbut now I\u2019m getting really sleepy.\r\nMy
       eyes are closing.\r\nCould I please go lie down?"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Yes. What you\u2019re describing makes sense."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "When you hold anxiety for a while without acting on it, the body often
       responds with exhaustion.\r\nIt\u2019s not weakness \u2014 it\u2019s fatigue
       after tension."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Before you decide to lie down, notice one thing:\r\nIs it more exhaustion
       \u2014 or an attempt to escape the thought?"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "You don\u2019t have to answer right away.\r\nJust notice it \u2014 and
       then decide."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'MAYA:'
     text: "No\u2026 I\u2019m really just very tired."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: Alright. Thank you for being able to tell the difference.
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "If it\u2019s exhaustion, it\u2019s okay to give your body space to rest.\r\nThe
       thoughts can stay. You don\u2019t have to fix them or respond to them."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: 'One more thing, Maya.
 
       On the table are the medications you have
       set up with your doctor for the evening.'
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "If you take them regularly, it\u2019s good to take them tonight as well
       \u2014\r\nnot to make the thoughts disappear,\r\nbut to give your nervous system
       some support during the night."
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: "Medication doesn\u2019t do the work for you.\r\nIt just makes it a little
       easier to carry what you\u2019re already carrying today.\r"
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   - speaker: 'DOCTOR:'
     text: 'You did the rest yourself.
 
       We can come back to this tomorrow.'
+    leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+    rightPortrait: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
   promptUI: {fileID: 2128718768}
   interactKey: 101
   teleportKey: 116
@@ -979,7 +1077,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 16
+  m_RootOrder: 15
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &719834489
 MonoBehaviour:
@@ -1270,7 +1368,7 @@ RectTransform:
   - {fileID: 1829554219}
   - {fileID: 2128718771}
   m_Father: {fileID: 0}
-  m_RootOrder: 14
+  m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -1405,7 +1503,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 13
+  m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &995619256
 GameObject:
@@ -1449,7 +1547,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 15
+  m_RootOrder: 14
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1007940235
 GameObject:
@@ -1533,7 +1631,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 17
+  m_RootOrder: 16
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1034451553
 GameObject:
@@ -1927,59 +2025,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1076704750}
   m_CullTransparentMesh: 1
---- !u!1 &1083968374
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1083968376}
-  - component: {fileID: 1083968375}
-  m_Layer: 5
-  m_Name: DialogueManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1083968375
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1083968374}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5d85f0cc991fa35488457fcffe72bc9d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  dialoguePanel: {fileID: 1829554218}
-  dialogueText: {fileID: 1265135396}
-  nextButton: {fileID: 1051211002}
-  closeButton: {fileID: 862106651}
-  speakerNameText: {fileID: 1034451555}
-  advanceKey: 101
-  closeKey: 27
-  charsPerSecond: 45
-  useTypewriter: 1
---- !u!4 &1083968376
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1083968374}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 35.22, y: -5.34, z: 0}
-  m_LocalScale: {x: 0.6562, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 11
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1118425992
 GameObject:
   m_ObjectHideFlags: 0
@@ -2062,7 +2107,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 18
+  m_RootOrder: 17
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1145235575
 GameObject:
@@ -2097,10 +2142,16 @@ MonoBehaviour:
   Lines:
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   promptUI: {fileID: 0}
   interactKey: 101
   teleportKey: 116
@@ -2148,7 +2199,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 12
+  m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1151795744
 GameObject:
@@ -2561,6 +2612,61 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 9
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1304398448
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1304398450}
+  - component: {fileID: 1304398449}
+  m_Layer: 5
+  m_Name: DialogueManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1304398449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304398448}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d85f0cc991fa35488457fcffe72bc9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dialoguePanel: {fileID: 1829554218}
+  dialogueText: {fileID: 1265135396}
+  nextButton: {fileID: 1051211002}
+  closeButton: {fileID: 862106651}
+  speakerNameText: {fileID: 1034451555}
+  leftPortraitImage: {fileID: 0}
+  rightPortraitImage: {fileID: 0}
+  advanceKey: 101
+  closeKey: 27
+  charsPerSecond: 45
+  useTypewriter: 1
+--- !u!4 &1304398450
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304398448}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 35.22, y: -5.34, z: 0}
+  m_LocalScale: {x: 0.6562, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 19
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1360501955
 GameObject:
   m_ObjectHideFlags: 0
@@ -2836,7 +2942,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 19
+  m_RootOrder: 18
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1579164307
 GameObject:

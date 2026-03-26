@@ -6,6 +6,11 @@ public struct DialogueLine
 {
     public string speaker;   // e.g., "Hero", "Bear"
     [TextArea(2, 6)] public string text;
+
+    [Tooltip("Portrait shown on the LEFT side of the dialogue panel for this line. Leave null to hide.")]
+    public Sprite leftPortrait;
+    [Tooltip("Portrait shown on the RIGHT side of the dialogue panel for this line. Leave null to hide.")]
+    public Sprite rightPortrait;
 }
 
 public class DialogueTrigger : MonoBehaviour

@@ -368,6 +368,90 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 125115531}
   m_CullTransparentMesh: 1
+--- !u!1 &150920071
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 150920072}
+  - component: {fileID: 150920073}
+  m_Layer: 0
+  m_Name: PortraitLeft
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &150920072
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150920071}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -636.5485, y: 124, z: 0}
+  m_LocalScale: {x: 83.16378, y: 83.16378, z: 83.16378}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 1653682330}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &150920073
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150920071}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 7.37, y: 8}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
 --- !u!1 &155111892
 GameObject:
   m_ObjectHideFlags: 0
@@ -1223,6 +1307,90 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   type: 1
   volumeMul: 0.535
+--- !u!1 &262414233
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 262414234}
+  - component: {fileID: 262414235}
+  m_Layer: 0
+  m_Name: PortraitRight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &262414234
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 262414233}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 629.4783, y: 121.8592, z: 0}
+  m_LocalScale: {x: 83.61644, y: 83.61644, z: 83.61644}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 1653682330}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &262414235
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 262414233}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 21300000, guid: c8c7ee25119301e40af583578150d109, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 7.37, y: 8}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
 --- !u!1 &268306527
 GameObject:
   m_ObjectHideFlags: 0
@@ -1397,7 +1565,7 @@ RectTransform:
   - {fileID: 1865477433}
   - {fileID: 928032416}
   m_Father: {fileID: 1653682330}
-  m_RootOrder: 0
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -1675,10 +1843,16 @@ MonoBehaviour:
   Lines:
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   promptUI: {fileID: 0}
   interactKey: 101
   teleportKey: 116
@@ -1988,43 +2162,79 @@ MonoBehaviour:
   Lines:
   - speaker: 'MAYA:'
     text: "\u201EJe tu niekto?\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201E\u2026\xC1no.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EPrep\xE1\u010D, nechcela som \u0165a vyru\u0161i\u0165.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201EU\u017E d\xE1vno ma nikto nena\u0161iel.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201ETak pre\u010Do si tu? Je tu \xFApln\xE1 tma.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201EPr\xE1ve preto.\u201C\n(Kr\xE1tka pauza.)\n\u201ESchov\xE1vam sa
       tu u\u017E ve\u013Emi dlho. \u010Cas tu ide pomal\u0161ie. Alebo mo\u017Eno
       v\xF4bec.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201ENevad\xED ti to?\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201ENie. Tma ni\u010D nechce. Nehodnot\xED. Len je.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201ETak pre\u010Do si tu? Je tu \xFApln\xE1 tma.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201EKe\u010F je svetlo, \u013Eudia sa pozeraj\xFA. Ke\u010F je tma,
       m\xF4\u017Eem by\u0165 pokojne s\xE1m sebou.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EA neh\u013Ead\xE1 \u0165a niekto?\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201EAk \xE1no, neh\u013Eadaj\xFA ve\u013Emi d\xF4kladne.\u201C\n\n(Ticho.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201ENemus\xED\u0161 tu zosta\u0165 nav\u017Edy.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PIERRE:'
     text: "\u201EViem. Ale dnes e\u0161te nie.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201ETak\u2026 dobr\xFA noc, Pierre.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: Pierre
     text: "\u201ETu je noc st\xE1le.\u201C\n\n(Maya odch\xE1dza.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: Pierre
     text: "\u201E\u010Eakujem, \u017Ee si ma na\u0161la.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: (Ticho.)
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   promptUI: {fileID: 1443829539}
   interactKey: 101
   teleportKey: 116
@@ -3138,34 +3348,64 @@ MonoBehaviour:
   Lines:
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   promptUI: {fileID: 1722875654}
   interactKey: 101
   teleportKey: 116
@@ -3990,34 +4230,64 @@ MonoBehaviour:
   Lines:
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 
     text: 
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   promptUI: {fileID: 1271654134}
   interactKey: 101
   teleportKey: 116
@@ -5381,11 +5651,17 @@ MonoBehaviour:
     lines:
     - speaker: 'MAYA:'
       text: "\u201CMy head\u2026 it\u2019s pounding so badly\u2026\u201D"
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "\u201CI\u2019m so exhausted\u2026 and I\u2019ve only just gotten up.\u201D"
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "\u201CThey told me that when I wake up\u2026 I\u2019m supposed to go
         see the psychologist, Veronika. She\u2019s somewhere at the end of the hallway.\u201D"
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     onlyFirstTime: 1
     playerPrefKey: 
     startDelay: 0.5
@@ -5394,18 +5670,30 @@ MonoBehaviour:
     - speaker: 'MAYA:'
       text: "Where\u2026 where am I?\r\nI only went to lie down\u2026\r\nIs this\u2026
         a dream?\r"
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "Maybe\u2026 maybe it\u2019s the medication they gave me.\r\nOr because
         I was so incredibly tired\u2026\r\nThey said dreams can become more vivid\u2026\r"
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "But this\u2026\r\nthis feels far too real."
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "This place\u2026\r\nit feels strangely familiar."
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "It looks like our home\u2026\r\njust\u2026 twisted somehow."
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     - speaker: 'MAYA:'
       text: "As if something isn\u2019t in the right place\u2026\r\nand yet everything
         is here."
+      leftPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+      rightPortrait: {fileID: 0}
     onlyFirstTime: 1
     playerPrefKey: 
     startDelay: 0.5
@@ -5413,10 +5701,16 @@ MonoBehaviour:
     lines:
     - speaker: 
       text: 3453453453
+      leftPortrait: {fileID: 0}
+      rightPortrait: {fileID: 0}
     - speaker: 
       text: 3453453453
+      leftPortrait: {fileID: 0}
+      rightPortrait: {fileID: 0}
     - speaker: 
       text: 3453453453
+      leftPortrait: {fileID: 0}
+      rightPortrait: {fileID: 0}
     onlyFirstTime: 1
     playerPrefKey: 
     startDelay: 0.5
@@ -5916,34 +6210,62 @@ MonoBehaviour:
   - speaker: "MAYA (vn\xFAtorn\xFD monol\xF3g):"
     text: "\u201EVzduch tu p\xE1chne dezinfekciou a my\u0161lienkami, ktor\xE9 sa
       nechc\xFA pohn\xFA\u0165 \u010Falej.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: "MAYA (vn\xFAtorn\xFD monol\xF3g):"
     text: "\u201E\u013Dudia okolo m\u0148a pozeraj\xFA skrz, akoby som sem u\u017E
       patrila.\u201C\n\n(Maya sa zastav\xED pri posteli. Pacient le\u017E\xED nehybne.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EAhoj\u2026 po\u010Duje\u0161 ma?\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PACIENT:'
     text: "(PACIENT ml\u010D\xED.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EPovedali mi, \u017Ee rozpr\xE1vanie pom\xE1ha. Neviem ale, komu
       vlastne.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EPam\xE4t\xE1\u0161 si, ako si sa sem dostal?\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PACIENT:'
     text: "(PACIENT ml\u010D\xED.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EAlebo si na to rad\u0161ej nechce\u0161 spomen\xFA\u0165.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201ECh\xE1pem to.\u201C\n\n(Kr\xE1tka pauza.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EJe tu ticho. A pritom tu nie som sama.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PACIENT:'
     text: "(PACIENT ml\u010D\xED.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
     text: "\u201EJa som Maya.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'PACIENT:'
     text: (Bez odpovede.)
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   - speaker: 'MAYA (ticho, pre seba):'
     text: "\u201EAsi budem dnes hovori\u0165 za n\xE1s oboch.\u201C"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 0}
   promptUI: {fileID: 1745777364}
   interactKey: 101
   teleportKey: 116
@@ -6023,6 +6345,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 262414234}
+  - {fileID: 150920072}
   - {fileID: 306026902}
   - {fileID: 2011739652}
   m_Father: {fileID: 178280671}
@@ -7257,7 +7581,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1653682330}
-  m_RootOrder: 1
+  m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -7395,6 +7719,8 @@ MonoBehaviour:
   nextButton: {fileID: 1865477436}
   closeButton: {fileID: 928032413}
   speakerNameText: {fileID: 2011739653}
+  leftPortraitImage: {fileID: 0}
+  rightPortraitImage: {fileID: 0}
   advanceKey: 101
   closeKey: 27
   charsPerSecond: 45
