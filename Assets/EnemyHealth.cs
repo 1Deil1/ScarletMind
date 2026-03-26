@@ -30,6 +30,12 @@ public class EnemyHealth : MonoBehaviour
     [Header("Death")]
     [Tooltip("Optional time (seconds) before GameObject is destroyed after death")]
     [SerializeField] private float destroyDelay = 0.08f;
+    [Tooltip("Sanity restored to the player when this enemy dies.")]
+    [SerializeField] private int sanityOnDeath = 8;
+    [Tooltip("Sound played when this enemy dies.")]
+    [SerializeField] private AudioClip deathSfx;
+    [Range(0f, 1f)]
+    [SerializeField] private float deathSfxVolume = 0.9f;
 
     // cached components
     private SpriteRenderer spriteRenderer;
@@ -124,6 +130,12 @@ public class EnemyHealth : MonoBehaviour
         {
             animator.SetTrigger("Die");
         }
+
+        if (deathSfx != null)
+            AudioManager.PlaySfxAt(deathSfx, transform.position, deathSfxVolume);
+
+        if (sanityOnDeath > 0 && PlayerControlls.Instance != null)
+            PlayerControlls.Instance.RestoreSanity(sanityOnDeath);
 
         // destroy after short delay (allow animation or effects)
         Destroy(gameObject, destroyDelay);

@@ -87,6 +87,6 @@ public class ScenePortal : MonoBehaviour
     private IEnumerator LoadSceneAfterDelay(string destination)
     {
         if (delay > 0f) yield return new WaitForSeconds(delay);
-        SceneManager.LoadScene(destination);
+        SceneFader.LoadScene(destination);
     }
 }

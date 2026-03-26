@@ -10,11 +10,14 @@ public class SanityVision : MonoBehaviour
     [SerializeField] private Image overlayImage; // Optional: if unset, auto-created
 
     [Header("Enable Threshold")]
-    [SerializeField] private int threshold = 30;
+    [Tooltip("Vignette starts appearing below this sanity value.")]
+    [SerializeField] private int threshold = 70;
 
     [Header("Circle Radius (normalized 0..1)")]
-    [SerializeField] private float lowRadius = 0.18f;
-    [SerializeField] private float highRadius = 0.30f;
+    [Tooltip("Radius when sanity is at the threshold (widest visible area).")]
+    [SerializeField] private float lowRadius = 0.12f;
+    [Tooltip("Radius when sanity is full (effect completely off).")]
+    [SerializeField] private float highRadius = 0.38f;
 
     [Header("Center Control")]
     [SerializeField] private bool followPlayer = true;
@@ -63,14 +66,26 @@ public class SanityVision : MonoBehaviour
         PlayerControlls.OnSanityChanged -= HandleSanityChanged;
     }
 
-    private void HandleSanityChanged(int current, int _)
+    private void HandleSanityChanged(int current, int max)
     {
-        bool shouldEnable = current <= threshold;
+        bool shouldEnable = current < threshold;
         if (shouldEnable != active)
         {
             active = shouldEnable;
             StopAllCoroutines();
-            StartCoroutine(FadeOverlay(active));
+            if (!active) StartCoroutine(FadeOverlay(false));
+        }
+
+        // Continuously remap radius from highRadius (full sanity) to lowRadius (zero sanity)
+        if (active)
+        {
+            float t = 1f - Mathf.Clamp01((float)current / Mathf.Max(threshold, 1));
+            targetRadius = Mathf.Lerp(highRadius, lowRadius, t);
+            alphaMultiplier = Mathf.Clamp01(alphaMultiplier + 0.01f);
+        }
+        else
+        {
+            targetRadius = highRadius;
         }
     }
 

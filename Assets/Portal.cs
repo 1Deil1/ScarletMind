@@ -39,6 +39,6 @@ public class Portal : MonoBehaviour
     private IEnumerator LoadSceneAfterDelay()
     {
         if (delay > 0f) yield return new WaitForSeconds(delay);
-        SceneManager.LoadScene(sceneName);
+        SceneFader.LoadScene(sceneName);
     }
 }

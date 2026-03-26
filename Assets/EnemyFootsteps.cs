@@ -28,17 +28,21 @@ public class EnemyFootsteps : MonoBehaviour
         if (stepClips == null || stepClips.Length == 0) return;
 
         float vx = Mathf.Abs(rb.velocity.x);
-        if (vx <= moveThreshold) { nextStepTime = Mathf.Max(nextStepTime, Time.time + 0.05f); return; }
+        if (vx <= moveThreshold)
+        {
+            nextStepTime = Mathf.Max(nextStepTime, Time.unscaledTime + 0.05f);
+            return;
+        }
 
         float t = Mathf.InverseLerp(0f, speedForMinInterval, vx);
         float interval = Mathf.Lerp(baseInterval, minInterval, t);
 
-        if (Time.time >= nextStepTime)
+        if (Time.unscaledTime >= nextStepTime)
         {
             var clip = stepClips[Random.Range(0, stepClips.Length)];
             float pitch = Random.Range(pitchRange.x, pitchRange.y);
             AudioManager.PlaySfxAt(clip, transform.position, volume, pitch);
-            nextStepTime = Time.time + interval;
+            nextStepTime = Time.unscaledTime + interval;
         }
     }
 }

@@ -53,10 +53,21 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private AudioClip enemyAttackHitSfx;
     [SerializeField] private AudioClip enemyAttackMissSfx;
 
+    [Header("Critical Hit Reaction")]
+    [Tooltip("How long the enemy is stunned after a critical weak point hit (real seconds).")]
+    [SerializeField] private float criticalStunDuration = 1.2f;
+    [Tooltip("Movement speed multiplier applied after the stun ends (0.5 = half speed).")]
+    [SerializeField] private float postCriticalSpeedMultiplier = 0.5f;
+    [Tooltip("How long the speed reduction lasts after the stun (real seconds).")]
+    [SerializeField] private float postCriticalSlowDuration = 3f;
+
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private Collider2D col;
     private Vector2 spawnPosition;
+
+    private bool isStunned;
+    private float originalMoveSpeed;
 
     private void Awake()
     {
@@ -216,6 +227,50 @@ public class EnemyAI : MonoBehaviour
 
         UpdateVisualState();
         UpdateAnimatorState();
+    }
+
+    public void OnCriticalWeakPointHit()
+    {
+        if (isStunned) return;
+        StopAllCoroutines();
+        StartCoroutine(CriticalStunRoutine());
+    }
+
+    private IEnumerator CriticalStunRoutine()
+    {
+        isStunned = true;
+        originalMoveSpeed = moveSpeed;
+
+        // Interrupt current action
+        state = State.Idle;
+        if (rb != null) rb.velocity = Vector2.zero;
+        UpdateVisualState();
+        UpdateAnimatorState();
+
+        // Stun: freeze in place
+        float stunElapsed = 0f;
+        while (stunElapsed < criticalStunDuration)
+        {
+            stunElapsed += Time.unscaledDeltaTime;
+            if (rb != null) rb.velocity = Vector2.zero;
+            yield return null;
+        }
+
+        // Slow: reduce move speed temporarily
+        moveSpeed = originalMoveSpeed * postCriticalSpeedMultiplier;
+        float slowElapsed = 0f;
+        while (slowElapsed < postCriticalSlowDuration)
+        {
+            slowElapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // Restore
+        moveSpeed = originalMoveSpeed;
+        isStunned = false;
+
+        if (PlayerWithinDetection(true))
+            state = State.Chasing;
     }
 
     private void AcquirePlayerIfNeeded()

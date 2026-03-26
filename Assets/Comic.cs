@@ -155,6 +155,8 @@ public class Comic : MonoBehaviour
             Debug.LogError("Comic: hubSceneName is empty. Set it in the Inspector.");
             return;
         }
-        SceneManager.LoadScene(hubSceneName, LoadSceneMode.Single);
+        if (busy) return;
+        busy = true;
+        SceneFader.LoadScene(hubSceneName, LoadSceneMode.Single);
     }
 }

@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -46,21 +44,17 @@ public class CameraSettingsTrigger : MonoBehaviour
         var cam = GetCameraFollow();
         if (cam == null) return;
 
-        // Backup current values once
         if (restoreOnExit && !hasBackup)
         {
-            // Reflect current internal state by reading serialized fields via reflection or expose getters.
-            // We have public setters but not getters; we can cache what we intend to change.
-            prevUseMaxY = useMaxY; // best-effort if getters aren’t available
-            prevMaxY = maxY;
-            prevMinY = minY;
-            hasBackup = true;
+            prevMinY    = cam.GetMinY();
+            prevUseMaxY = useMaxY;
+            prevMaxY    = maxY;
+            hasBackup   = true;
         }
 
-        // Apply new settings
-        if (setMinY) SetPrivateField(cam, "minY", minY);
+        if (setMinY)    cam.SetMinY(minY);
         if (setUseMaxY) cam.SetMaxYEnabled(useMaxY);
-        if (useMaxY) cam.SetMaxY(maxY);
+        if (useMaxY)    cam.SetMaxY(maxY);
     }
 
     private void OnTriggerExit2D(Collider2D other)
@@ -71,10 +65,9 @@ public class CameraSettingsTrigger : MonoBehaviour
         var cam = GetCameraFollow();
         if (cam == null) return;
 
-        // Restore backed up values
         if (hasBackup)
         {
-            SetPrivateField(cam, "minY", prevMinY);
+            cam.SetMinY(prevMinY);
             cam.SetMaxYEnabled(prevUseMaxY);
             cam.SetMaxY(prevMaxY);
             hasBackup = false;
@@ -86,12 +79,5 @@ public class CameraSettingsTrigger : MonoBehaviour
         if (cameraFollow != null) return cameraFollow;
         var cam = Camera.main;
         return cam != null ? cam.GetComponent<CameraFollow>() : null;
-    }
-
-    // Helper to set non-public serialized fields safely
-    private static void SetPrivateField(CameraFollow cam, string fieldName, float value)
-    {
-        var f = typeof(CameraFollow).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        if (f != null && f.FieldType == typeof(float)) f.SetValue(cam, value);
     }
 }

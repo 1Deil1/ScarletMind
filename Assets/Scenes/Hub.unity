@@ -2326,10 +2326,7 @@ MonoBehaviour:
   speedThresholdForTightFollow: 1
   fastSmoothTime: 0.2
   cameraBounds: {fileID: 0}
-  cameraBoundsList:
-  - {fileID: 799857824}
-  - {fileID: 1936788031}
-  - {fileID: 1024236406}
+  cameraBoundsList: []
   edgePadding: {x: -8.65, y: 0.5}
   clampYToBounds: 0
   boundsSwitchPadding: 1
@@ -2339,6 +2336,8 @@ MonoBehaviour:
   interiorBias: 0.5
   cameraLocked: 0
   lockPosition: {fileID: 0}
+  defaultShakeMagnitude: 0.1
+  defaultShakeDuration: 0.2
 --- !u!1 &529315841
 GameObject:
   m_ObjectHideFlags: 0
@@ -4491,6 +4490,8 @@ GameObject:
   - component: {fileID: 1304805605}
   - component: {fileID: 1304805610}
   - component: {fileID: 1304805611}
+  - component: {fileID: 1304805613}
+  - component: {fileID: 1304805612}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4590,8 +4591,8 @@ MonoBehaviour:
   dashSfx: {fileID: 8300000, guid: 175cd302fbdd3f742b44ea90c2a0ec8a, type: 3}
   jumpSfxVolume: 0.208
   slideSfxVolume: 0.709
-  attackHitSfxVolume: 1
-  attackMissSfxVolume: 1
+  attackHitSfxVolume: 0.759
+  attackMissSfxVolume: 0.759
   dashSfxVolume: 0.432
   stepDefault: []
   stepStone:
@@ -4773,6 +4774,50 @@ MonoBehaviour:
   disableAttackInHub: 1
   disableDashInHub: 1
   disableSlideInHub: 1
+--- !u!114 &1304805612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304805604}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f1f5703e34fcb745bdd4a771a90609a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  criticalTimeScale: 0.15
+  criticalSlowDuration: 1
+  timeRestoreDuration: 0.4
+  shakeMagnitude: 0.15
+  shakeDuration: 0.25
+  criticalHitSfx: {fileID: 0}
+  criticalHitVolume: 1
+--- !u!114 &1304805613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304805604}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 102f7036db861af4984edb28d64e3d2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activationKey: 113
+  cooldown: 22
+  slowTimeScale: 0.3
+  slowDuration: 3
+  timeRestoreDuration: 0.4
+  weakPointDuration: 5
+  weakPointRadius: 14
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  anchorTrigger: grounding
+  activationShakeMagnitude: 0.08
+  activationShakeDuration: 0.25
 --- !u!1 &1314282716
 GameObject:
   m_ObjectHideFlags: 0
@@ -7512,7 +7557,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   type: 1
-  volumeMul: 0.562
+  volumeMul: 0.46
 --- !u!61 &2073477293
 BoxCollider2D:
   m_ObjectHideFlags: 0

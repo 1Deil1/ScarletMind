@@ -1,4 +1,4 @@
-using System; // for Action
+using System;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -56,7 +56,7 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private KeyCode dashKey = KeyCode.LeftShift;
     [SerializeField] private float dashSpeed = 18f;
     [SerializeField] private float dashDuration = 0.15f;
-    [SerializeField] private float dashCooldown = 0.25f;
+    [SerializeField] private float dashCooldown = 1.5f;
     [SerializeField] private string dashTriggerParameter = "dash";
 
     [Header("Action Lock / Post-dash")]
@@ -131,6 +131,7 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private float gameOverDelay = 0.75f;
 
     private bool isGameOverTriggered = false;
+    private bool isLoadingScene      = false;
 
     [Header("Hub Sanity")]
     [SerializeField] private string hubSceneName = "Hub";
@@ -155,7 +156,7 @@ public class PlayerControlls : MonoBehaviour
     [SerializeField] private KeyCode slideKey = KeyCode.C;
     [SerializeField] private float slideSpeed = 10f;
     [SerializeField] private float slideDuration = 0.35f;
-    [SerializeField] private float slideCooldown = 0.4f;
+    [SerializeField] private float slideCooldown = 1.5f;
 
     // Runtime
     private bool isSliding = false;
@@ -571,8 +572,9 @@ public class PlayerControlls : MonoBehaviour
         lastAttackTime = Time.time;
         StartCoroutine(AttackRoutine());
 
-        // Animator trigger selection
+        // Determine attack type BEFORE triggering the animator
         bool groundedRunning = isGrounded && Mathf.Abs(xAxis) > runInputThreshold;
+
         if (anim != null)
         {
             if (groundedRunning && !string.IsNullOrEmpty(attackRunTriggerParameter))
@@ -581,30 +583,61 @@ public class PlayerControlls : MonoBehaviour
                 anim.SetTrigger(attackTriggerParameter);
         }
 
-        Vector2 origin = (rb != null) ? rb.position : (Vector2)transform.position;
-        Vector2 dir = DetermineAttackDirection();
-
-        float range = GetRangeForDir(dir);
-        Vector2 boxSize = GetBoxSizeForDir(dir);
+        Vector2 origin    = (rb != null) ? rb.position : (Vector2)transform.position;
+        Vector2 dir       = DetermineAttackDirection();
+        float   range     = GetRangeForDir(dir);
+        Vector2 boxSize   = GetBoxSizeForDir(dir);
         Vector2 boxCenter = origin + dir * range;
 
         Collider2D[] hits = Physics2D.OverlapBoxAll(boxCenter, boxSize, 0f, attackLayer);
 
-        int totalDamageDealt = 0;
+        int  totalDamageDealt = 0;
+        bool anyCritical      = false;
+
         foreach (var c in hits)
         {
-            c.transform.SendMessage("TakeDamage", attackDamage, SendMessageOptions.DontRequireReceiver);
-            totalDamageDealt += attackDamage;
+            WeakPoint weakPoint = c.GetComponentInChildren<WeakPoint>();
+            if (weakPoint == null) weakPoint = c.GetComponentInParent<WeakPoint>();
+
+            bool weakPointOpen = weakPoint != null
+                                 && weakPoint.IsRevealed
+                                 && GroundingMode.Instance != null
+                                 && GroundingMode.Instance.WeakPointsOpen;
+
+            bool isCritical = false;
+            if (weakPointOpen)
+            {
+                // Idle / standing attack hits the UPPER zone
+                // Run attack hits the LOWER zone
+                bool zoneMatch = groundedRunning
+                    ? weakPoint.ActiveZone == WeakPoint.WeakPointZone.Lower
+                    : weakPoint.ActiveZone == WeakPoint.WeakPointZone.Upper;
+
+                isCritical = zoneMatch;
+            }
+
+            int damage = isCritical ? attackDamage * 2 : attackDamage;
+
+            if (isCritical)
+            {
+                weakPoint.Hide();
+                anyCritical = true;
+                c.transform.root.SendMessage("OnCriticalWeakPointHit", SendMessageOptions.DontRequireReceiver);
+            }
+
+            c.transform.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
+            totalDamageDealt += damage;
         }
+
+        if (anyCritical && CriticalHitFX.Instance != null)
+            CriticalHitFX.Instance.TriggerCriticalHit(boxCenter);
 
         if (totalDamageDealt > 0 && sanityPerDamagePoint > 0)
             RestoreSanity(totalDamageDealt * sanityPerDamagePoint);
 
         actionLockedUntil = Time.time + attackDuration;
 
-        // --- Audio: Attack
-        // Choose hit or miss sound based on damage dealt
-        var atkClip = (totalDamageDealt > 0) ? attackHitSfx : attackMissSfx;
+        var   atkClip   = (totalDamageDealt > 0) ? attackHitSfx   : attackMissSfx;
         float atkVolume = (totalDamageDealt > 0) ? attackHitSfxVolume : attackMissSfxVolume;
         if (atkClip != null) AudioManager.PlaySfxAt(atkClip, transform.position, atkVolume);
     }
@@ -660,9 +693,8 @@ public class PlayerControlls : MonoBehaviour
 
     public void TakeSanityDamage(int amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0 || isLoadingScene) return;
         SetSanity(sanity - amount);
-        // Game Over handled inside SetSanity
     }
 
     public void RestoreSanity(int amount)
@@ -1034,7 +1066,7 @@ public class PlayerControlls : MonoBehaviour
     // ---- Game Over ----
     private void TriggerGameOver()
     {
-        if (isGameOverTriggered) return; // guard against re-entry
+        if (isGameOverTriggered || isLoadingScene) return;
         isGameOverTriggered = true;
 
         // Lock input and stop horizontal motion
@@ -1057,10 +1089,9 @@ public class PlayerControlls : MonoBehaviour
 
         if (!string.IsNullOrEmpty(endingSceneName))
         {
-            // Clear any spawn overrides to ensure Ending loads as authored
+            isLoadingScene = true;
             SceneSpawnState.NextSpawnId = null;
-
-            SceneManager.LoadScene(endingSceneName, LoadSceneMode.Single);
+            SceneFader.LoadScene(endingSceneName, LoadSceneMode.Single);
         }
         else
         {

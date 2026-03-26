@@ -12,7 +12,7 @@ public class StartMenuController : MonoBehaviour
     // Call from your Start button OnClick()
     public void OnStartClick()
     {
-        SceneManager.LoadScene("Comic");
+        SceneFader.LoadScene("Comic");
     }
 
     // Call from a Quit button OnClick() or wherever you need to exit the game

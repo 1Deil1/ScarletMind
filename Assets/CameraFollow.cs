@@ -1,7 +1,10 @@
+using System.Collections;
 using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
+    public static CameraFollow Instance { get; private set; }
+
     [SerializeField] private Vector3 offset = new Vector3(0f, 0f, -10f);
 
     [Tooltip("Smaller = tighter (snappier) follow. ~0.1-0.4 is common.")]
@@ -63,6 +66,10 @@ public class CameraFollow : MonoBehaviour
     [Tooltip("Optional fixed position to use while locked. Leave null to hold current position when locking.")]
     [SerializeField] private Transform lockPosition;
 
+    [Header("Camera Shake")]
+    [SerializeField] private float defaultShakeMagnitude = 0.1f;
+    [SerializeField] private float defaultShakeDuration = 0.2f;
+
     private Vector3 currentVelocity;
     private Vector3 heldLockPosition;
 
@@ -75,8 +82,14 @@ public class CameraFollow : MonoBehaviour
     private Camera cachedCamera;
     private float zoomVelocity;
 
+    private Vector3 shakeOffset;
+    private Coroutine shakeRoutine;
+
     void Start()
     {
+        if (Instance != null && Instance != this) { Destroy(this); return; }
+        Instance = this;
+
         cachedCamera = GetComponent<Camera>();
         if (cachedCamera != null && cachedCamera.orthographic)
         {
@@ -107,7 +120,7 @@ public class CameraFollow : MonoBehaviour
                 ? new Vector3(lockPosition.position.x, lockPosition.position.y, transform.position.z)
                 : new Vector3(heldLockPosition.x, heldLockPosition.y, transform.position.z);
 
-            transform.position = target;
+            transform.position = target + shakeOffset;
             return;
         }
 
@@ -134,7 +147,7 @@ public class CameraFollow : MonoBehaviour
         if (playerRb != null && playerRb.velocity.magnitude > speedThresholdForTightFollow)
             currentSmooth = fastSmoothTime;
 
-        transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, currentSmooth, maxSpeed, Time.deltaTime);
+        transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, currentSmooth, maxSpeed, Time.deltaTime) + shakeOffset;
     }
 
     private void UpdateZoom()
@@ -165,15 +178,10 @@ public class CameraFollow : MonoBehaviour
             heldLockPosition = transform.position;
     }
 
-    public void SetMaxYEnabled(bool enabled)
-    {
-        useMaxY = enabled;
-    }
-
-    public void SetMaxY(float value)
-    {
-        maxY = value;
-    }
+    public void SetMaxYEnabled(bool enabled) { useMaxY = enabled; }
+    public void SetMaxY(float value)         { maxY = value; }
+    public void SetMinY(float value)         { minY = value; }
+    public float GetMinY()                   { return minY; }
 
     public void SetZoomMultiplier(float value)
     {
@@ -193,6 +201,30 @@ public class CameraFollow : MonoBehaviour
     public float GetCurrentOrthographicSize()
     {
         return cachedCamera != null ? cachedCamera.orthographicSize : 0f;
+    }
+
+    public void TriggerShake(float magnitude = -1f, float duration = -1f)
+    {
+        float mag = magnitude < 0f ? defaultShakeMagnitude : magnitude;
+        float dur = duration  < 0f ? defaultShakeDuration  : duration;
+
+        if (shakeRoutine != null) StopCoroutine(shakeRoutine);
+        shakeRoutine = StartCoroutine(ShakeRoutine(mag, dur));
+    }
+
+    private IEnumerator ShakeRoutine(float magnitude, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float fade = 1f - (elapsed / duration);
+            float x = (Random.value * 2f - 1f) * magnitude * fade;
+            float y = (Random.value * 2f - 1f) * magnitude * fade;
+            shakeOffset = new Vector3(x, y, 0f);
+            yield return null;
+        }
+        shakeOffset = Vector3.zero;
     }
 
     private Vector3 ConfineWithSoftEdges(Vector3 desired)

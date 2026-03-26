@@ -43,6 +43,14 @@ public class BigBunnyAI : MonoBehaviour
     [SerializeField] private int sanityDamage = 15;
     [SerializeField] private float attackWindup = 0.25f;
 
+    [Header("Critical Hit Reaction")]
+    [Tooltip("How long the bunny is stunned after a critical weak point hit (real seconds).")]
+    [SerializeField] private float criticalStunDuration = 1.2f;
+    [Tooltip("Movement speed multiplier applied after the stun ends (0.5 = half speed).")]
+    [SerializeField] private float postCriticalSpeedMultiplier = 0.5f;
+    [Tooltip("How long the speed reduction lasts after the stun (real seconds).")]
+    [SerializeField] private float postCriticalSlowDuration = 3f;
+
     [Header("Animator")]
     [SerializeField] private Animator animator;
     [SerializeField] private string idleStateName = "Bunny_Idle";
@@ -72,6 +80,10 @@ public class BigBunnyAI : MonoBehaviour
     private float lastHopTime = -999f;
     private float lastAttackTime = -999f;
     private float desiredHopDir = 1f;
+
+    private bool isStunned;
+    private float originalHopSpeed;
+    private float originalHopForce;
 
     private void Awake()
     {
@@ -353,5 +365,54 @@ public class BigBunnyAI : MonoBehaviour
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
         }
+    }
+
+    public void OnCriticalWeakPointHit()
+    {
+        if (isStunned) return;
+        StopAllCoroutines();
+        StartCoroutine(CriticalStunRoutine());
+    }
+
+    private IEnumerator CriticalStunRoutine()
+    {
+        isStunned = true;
+        originalHopSpeed = hopHorizontalSpeed;
+        originalHopForce = hopForceY;
+
+        // Interrupt whatever the bunny was doing — land it immediately
+        state = State.Idle;
+        if (rb != null) rb.velocity = Vector2.zero;
+        UpdateVisualState();
+        PlayIdleIfPossible();
+
+        // Stun: freeze in place (unscaled so it ignores slow-mo)
+        float stunElapsed = 0f;
+        while (stunElapsed < criticalStunDuration)
+        {
+            stunElapsed += Time.unscaledDeltaTime;
+            if (rb != null) rb.velocity = new Vector2(0f, rb.velocity.y);
+            yield return null;
+        }
+
+        // Slow: reduce hop speed and force temporarily
+        hopHorizontalSpeed = originalHopSpeed * postCriticalSpeedMultiplier;
+        hopForceY          = originalHopForce * postCriticalSpeedMultiplier;
+
+        float slowElapsed = 0f;
+        while (slowElapsed < postCriticalSlowDuration)
+        {
+            slowElapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // Restore
+        hopHorizontalSpeed = originalHopSpeed;
+        hopForceY          = originalHopForce;
+        isStunned = false;
+
+        state = PlayerWithinDetection(true) ? State.Chasing : State.Idle;
+        UpdateVisualState();
+        PlayIdleIfPossible();
     }
 }
