@@ -8,7 +8,7 @@ public class DialogueManager : MonoBehaviour
 {
     public static DialogueManager Instance { get; private set; }
 
-    [Header("UI References — drag these in from the Inspector")]
+    [Header("UI References ï¿½ drag these in from the Inspector")]
     public GameObject        dialoguePanel;
     public TextMeshProUGUI   dialogueText;
     [SerializeField] private Button             nextButton;
@@ -22,6 +22,8 @@ public class DialogueManager : MonoBehaviour
     // Resolved at runtime from the GameObjects above
     private Image leftPortraitImage;
     private Image rightPortraitImage;
+    private RawImage leftPortraitRaw;
+    private RawImage rightPortraitRaw;
 
     [Header("Input")]
     [SerializeField] private KeyCode advanceKey = KeyCode.E;
@@ -49,7 +51,7 @@ public class DialogueManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        // NOT DontDestroyOnLoad — scene-local as requested
+        DontDestroyOnLoad(gameObject);
 
         // If fields were not dragged in, try to find them automatically as fallback
         AutoWireIfNeeded();
@@ -80,12 +82,20 @@ public class DialogueManager : MonoBehaviour
 
     private void AutoWireIfNeeded()
     {
-        // Resolve Image components from the dragged-in GameObjects first
-        if (leftPortraitObject  != null && leftPortraitImage  == null)
-            leftPortraitImage  = leftPortraitObject.GetComponent<Image>();
+        // Resolve Image or RawImage from the dragged-in GameObjects first
+        if (leftPortraitObject != null && leftPortraitImage == null && leftPortraitRaw == null)
+        {
+            leftPortraitImage = leftPortraitObject.GetComponent<Image>();
+            if (leftPortraitImage == null)
+                leftPortraitRaw = leftPortraitObject.GetComponent<RawImage>();
+        }
 
-        if (rightPortraitObject != null && rightPortraitImage == null)
+        if (rightPortraitObject != null && rightPortraitImage == null && rightPortraitRaw == null)
+        {
             rightPortraitImage = rightPortraitObject.GetComponent<Image>();
+            if (rightPortraitImage == null)
+                rightPortraitRaw = rightPortraitObject.GetComponent<RawImage>();
+        }
 
         // Find DialoguePanel if not assigned
         if (dialoguePanel == null)
@@ -122,19 +132,123 @@ public class DialogueManager : MonoBehaviour
 
         // Portrait fallback: search by name if GameObjects were not dragged in
         if (leftPortraitImage == null || rightPortraitImage == null)
+            SearchPortraitsIn(dialoguePanel.transform);
+
+        // Search from the Canvas that holds the panel (portraits may be siblings, not children)
+        if (leftPortraitImage == null || rightPortraitImage == null)
         {
-            foreach (var img in dialoguePanel.GetComponentsInChildren<Image>(true))
+            Canvas parentCanvas = dialoguePanel.GetComponentInParent<Canvas>();
+            if (parentCanvas != null)
+                SearchPortraitsIn(parentCanvas.transform);
+        }
+
+        // Search from this DialogueManager's own transform
+        if (leftPortraitImage == null || rightPortraitImage == null)
+            SearchPortraitsIn(transform);
+
+        // Last resort: search all scene root objects
+        if (leftPortraitImage == null || rightPortraitImage == null)
+        {
+            foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
             {
-                if (leftPortraitImage  == null && img.name == "PortraitLeft")  leftPortraitImage  = img;
-                if (rightPortraitImage == null && img.name == "PortraitRight") rightPortraitImage = img;
+                SearchPortraitsIn(root.transform);
+                if (leftPortraitImage != null && rightPortraitImage != null) break;
             }
         }
 
-        Debug.Log($"[DialogueManager] Wired — " +
+        bool leftOk  = leftPortraitImage  != null || leftPortraitRaw  != null;
+        bool rightOk = rightPortraitImage != null || rightPortraitRaw != null;
+
+        if (!leftOk)
+            Debug.LogWarning("[DialogueManager] PortraitLeft NOT found. " +
+                "Name an Image or RawImage 'PortraitLeft' or drag the GameObject into the Inspector slot.");
+        if (!rightOk)
+            Debug.LogWarning("[DialogueManager] PortraitRight NOT found. " +
+                "Name an Image or RawImage 'PortraitRight' or drag the GameObject into the Inspector slot.");
+
+        Debug.Log($"[DialogueManager] Wired ï¿½ " +
                   $"panel={dialoguePanel != null} " +
                   $"text={dialogueText != null} " +
-                  $"leftPortrait={leftPortraitImage != null} " +
-                  $"rightPortrait={rightPortraitImage != null}");
+                  $"leftPortrait={leftOk} (Image={leftPortraitImage != null} Raw={leftPortraitRaw != null}) " +
+                  $"rightPortrait={rightOk} (Image={rightPortraitImage != null} Raw={rightPortraitRaw != null})");
+    }
+
+    /// <summary>
+    /// Search for portrait objects under root by name, then resolve Image or RawImage.
+    /// </summary>
+    private void SearchPortraitsIn(Transform root)
+    {
+        // First pass: search by Image component
+        foreach (var img in root.GetComponentsInChildren<Image>(true))
+        {
+            string n = NormalizeName(img.gameObject.name);
+            if (leftPortraitImage == null && IsLeftName(n))
+            {
+                leftPortraitImage  = img;
+                leftPortraitObject = img.gameObject;
+            }
+            if (rightPortraitImage == null && IsRightName(n))
+            {
+                rightPortraitImage  = img;
+                rightPortraitObject = img.gameObject;
+            }
+        }
+
+        // Second pass: search by RawImage component (user may have used RawImage instead of Image)
+        if (leftPortraitRaw == null || rightPortraitRaw == null)
+        {
+            foreach (var raw in root.GetComponentsInChildren<RawImage>(true))
+            {
+                string n = NormalizeName(raw.gameObject.name);
+                if (leftPortraitImage == null && leftPortraitRaw == null && IsLeftName(n))
+                {
+                    leftPortraitRaw    = raw;
+                    leftPortraitObject = raw.gameObject;
+                }
+                if (rightPortraitImage == null && rightPortraitRaw == null && IsRightName(n))
+                {
+                    rightPortraitRaw    = raw;
+                    rightPortraitObject = raw.gameObject;
+                }
+            }
+        }
+
+        // Third pass: search by Transform name (the Image/RawImage may be on a child)
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            string n = NormalizeName(t.name);
+            if (leftPortraitImage == null && leftPortraitRaw == null && IsLeftName(n))
+            {
+                leftPortraitImage = t.GetComponentInChildren<Image>(true);
+                if (leftPortraitImage == null) leftPortraitRaw = t.GetComponentInChildren<RawImage>(true);
+                if (leftPortraitImage != null || leftPortraitRaw != null)
+                    leftPortraitObject = t.gameObject;
+            }
+            if (rightPortraitImage == null && rightPortraitRaw == null && IsRightName(n))
+            {
+                rightPortraitImage = t.GetComponentInChildren<Image>(true);
+                if (rightPortraitImage == null) rightPortraitRaw = t.GetComponentInChildren<RawImage>(true);
+                if (rightPortraitImage != null || rightPortraitRaw != null)
+                    rightPortraitObject = t.gameObject;
+            }
+        }
+    }
+
+    private static string NormalizeName(string name)
+    {
+        return name.ToLowerInvariant().Replace(" ", "").Replace("_", "").Replace("-", "");
+    }
+
+    private static bool IsLeftName(string n)
+    {
+        return n.Contains("portraitleft") || n.Contains("leftportrait") ||
+               n == "portraitl" || n == "faceleft" || n == "leftface";
+    }
+
+    private static bool IsRightName(string n)
+    {
+        return n.Contains("portraitright") || n.Contains("rightportrait") ||
+               n == "portraitr" || n == "faceright" || n == "rightface";
     }
 
     private void WireButtons()
@@ -156,8 +270,8 @@ public class DialogueManager : MonoBehaviour
     private void HidePanel()
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
-        SetPortraitSprite(leftPortraitImage,  null);
-        SetPortraitSprite(rightPortraitImage, null);
+        ApplyPortrait(leftPortraitImage,  leftPortraitRaw,  null);
+        ApplyPortrait(rightPortraitImage, rightPortraitRaw, null);
         IsActive        = false;
         typing          = false;
         currentFullLine = null;
@@ -175,7 +289,7 @@ public class DialogueManager : MonoBehaviour
 
         if (dialoguePanel == null || dialogueText == null)
         {
-            Debug.LogWarning("[DialogueManager] Cannot start dialogue — UI refs missing. " +
+            Debug.LogWarning("[DialogueManager] Cannot start dialogue ï¿½ UI refs missing. " +
                              "Drag DialoguePanel, DialogueText, PortraitLeft and PortraitRight " +
                              "into the DialogueManager Inspector slots.");
             return;
@@ -224,8 +338,8 @@ public class DialogueManager : MonoBehaviour
 
         var line = lines[index];
         SetSpeakerName(string.IsNullOrWhiteSpace(line.speaker) ? null : line.speaker);
-        SetPortraitSprite(leftPortraitImage,  line.leftPortrait);
-        SetPortraitSprite(rightPortraitImage, line.rightPortrait);
+        ApplyPortrait(leftPortraitImage,  leftPortraitRaw,  line.leftPortrait);
+        ApplyPortrait(rightPortraitImage, rightPortraitRaw, line.rightPortrait);
 
         currentFullLine = line.text ?? string.Empty;
 
@@ -272,14 +386,24 @@ public class DialogueManager : MonoBehaviour
         if (show) speakerNameText.text = name;
     }
 
-    private static void SetPortraitSprite(Image img, Sprite sprite)
+    /// <summary>
+    /// Apply a portrait sprite to whichever component exists (Image or RawImage).
+    /// </summary>
+    private static void ApplyPortrait(Image img, RawImage raw, Sprite sprite)
     {
-        if (img == null) return;
-
-        // Always keep the GameObject active — use colour alpha to show/hide
-        if (!img.gameObject.activeSelf) img.gameObject.SetActive(true);
-
-        img.sprite = sprite;
-        img.color  = sprite != null ? kVisible : kHidden;
+        if (img != null)
+        {
+            if (!img.gameObject.activeSelf) img.gameObject.SetActive(true);
+            if (!img.enabled) img.enabled = true;
+            img.sprite = sprite;
+            img.color  = sprite != null ? kVisible : kHidden;
+        }
+        else if (raw != null)
+        {
+            if (!raw.gameObject.activeSelf) raw.gameObject.SetActive(true);
+            if (!raw.enabled) raw.enabled = true;
+            raw.texture = sprite != null ? sprite.texture : null;
+            raw.color   = sprite != null ? kVisible : kHidden;
+        }
     }
 }

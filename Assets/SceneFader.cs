@@ -5,9 +5,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Persistent singleton that fades the screen to black between scene loads.
-/// Usage: SceneFader.LoadScene("SceneName") — call instead of SceneManager.LoadScene directly.
+/// Usage: SceneFader.LoadScene("SceneName") ï¿½ call instead of SceneManager.LoadScene directly.
 /// Drop this on any persistent GameObject in your first scene (e.g. a "Managers" object).
-/// It creates its own Canvas and overlay automatically — no extra setup needed.
+/// It creates its own Canvas and overlay automatically ï¿½ no extra setup needed.
 /// </summary>
 [DisallowMultipleComponent]
 public class SceneFader : MonoBehaviour
@@ -62,6 +62,23 @@ public class SceneFader : MonoBehaviour
         Instance.StartCoroutine(Instance.FadeAndLoad(sceneName, mode));
     }
 
+    /// <summary>
+    /// Perform a fade-out ? hold black ? callback ? fade-in without loading a new scene.
+    /// Used for in-scene teleportation (e.g. MapPortal).
+    /// </summary>
+    public static Coroutine FadeInOut(float outDuration, float holdDuration, float inDuration, System.Action onBlack = null)
+    {
+        if (Instance == null)
+        {
+            onBlack?.Invoke();
+            return null;
+        }
+        return Instance.StartCoroutine(Instance.FadeInOutRoutine(outDuration, holdDuration, inDuration, onBlack));
+    }
+
+    /// <summary>True while any fade sequence (scene load or in-scene) is running.</summary>
+    public static bool IsFading => Instance != null && Instance.isFading;
+
     // ?? Internal ??????????????????????????????????????????????????
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -77,6 +94,44 @@ public class SceneFader : MonoBehaviour
         yield return StartCoroutine(FadeOut());
         SceneManager.LoadScene(sceneName, mode);
         // FadeIn is triggered automatically by OnSceneLoaded
+    }
+
+    private IEnumerator FadeInOutRoutine(float outDuration, float holdDuration, float inDuration, System.Action onBlack)
+    {
+        if (isFading) yield break;
+
+        // Fade to black
+        isFading = true;
+        overlay.enabled = true;
+        float elapsed = 0f;
+        float dur = Mathf.Max(outDuration, 0.001f);
+        while (elapsed < dur)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            SetAlpha(Mathf.Clamp01(elapsed / dur));
+            yield return null;
+        }
+        SetAlpha(1f);
+
+        // Execute callback while screen is black
+        onBlack?.Invoke();
+
+        // Hold black
+        if (holdDuration > 0f)
+            yield return new WaitForSecondsRealtime(holdDuration);
+
+        // Fade back in
+        elapsed = 0f;
+        dur = Mathf.Max(inDuration, 0.001f);
+        while (elapsed < dur)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            SetAlpha(1f - Mathf.Clamp01(elapsed / dur));
+            yield return null;
+        }
+        SetAlpha(0f);
+        overlay.enabled = false;
+        isFading = false;
     }
 
     private IEnumerator FadeOut()

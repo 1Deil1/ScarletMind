@@ -25,6 +25,13 @@ public class PlayerControlls : MonoBehaviour
 
     private float currentWalkSpeed;
 
+    [Header("Scene Scale Overrides")]
+    [Tooltip("Override the player's localScale per scene. Useful when the House scene needs a bigger player.")]
+    [SerializeField] private bool useSceneScaleOverrides = true;
+    [SerializeField] private SceneScaleOverride[] scaleOverrides;
+
+    private Vector3 defaultScale;
+
     private float xAxis;
     private float lastMoveDir = 1f;
     private bool isFacingRight = true;
@@ -235,8 +242,11 @@ public class PlayerControlls : MonoBehaviour
         if (anim != null && !string.IsNullOrEmpty(facingAnimatorParameter))
             anim.SetBool(facingAnimatorParameter, isFacingRight);
 
+        defaultScale = transform.localScale;
+
         currentWalkSpeed = walkSpeed;
         ApplySceneWalkSpeed(SceneManager.GetActiveScene().name);
+        ApplySceneScale(SceneManager.GetActiveScene().name);
 
         sanity = Mathf.Clamp(sanity, 0, maxSanity);
         EnsureSanityUI();
@@ -277,6 +287,7 @@ public class PlayerControlls : MonoBehaviour
         UpdateSanityUI();
 
         ApplySceneWalkSpeed(scene.name);
+        ApplySceneScale(scene.name);
 
         if (scene.name == hubSceneName)
         {
@@ -672,7 +683,7 @@ public class PlayerControlls : MonoBehaviour
     private IEnumerator AttackRoutine()
     {
         yield return new WaitForSeconds(attackDuration);
-        // Safety: force back to locomotion in case Animator transitions aren’t configured yet
+        // Safety: force back to locomotion in case Animator transitions arenï¿½t configured yet
         ReturnToLocomotion();
     }
 
@@ -885,7 +896,7 @@ public class PlayerControlls : MonoBehaviour
         if (anim != null && !string.IsNullOrEmpty(slidingBoolParameter))
             anim.SetBool(slidingBoolParameter, false);
 
-        // Safety: force back to locomotion in case Animator transitions aren’t configured yet
+        // Safety: force back to locomotion in case Animator transitions arenï¿½t configured yet
         ReturnToLocomotion();
     }
 
@@ -1162,6 +1173,40 @@ public class PlayerControlls : MonoBehaviour
     }
 
     public float CurrentWalkSpeed => currentWalkSpeed;
+
+    private void ApplySceneScale(string sceneName)
+    {
+        // Preserve the facing direction sign
+        float sign = transform.localScale.x >= 0f ? 1f : -1f;
+
+        if (!useSceneScaleOverrides || scaleOverrides == null)
+        {
+            // Restore default scale (keep facing)
+            Vector3 s = defaultScale;
+            s.x = Mathf.Abs(s.x) * sign;
+            transform.localScale = s;
+            return;
+        }
+
+        for (int i = 0; i < scaleOverrides.Length; i++)
+        {
+            var entry = scaleOverrides[i];
+            if (entry != null && !string.IsNullOrEmpty(entry.sceneName) && entry.sceneName == sceneName)
+            {
+                Vector3 s = new Vector3(
+                    Mathf.Abs(entry.scale.x) * sign,
+                    entry.scale.y,
+                    entry.scale.z == 0f ? defaultScale.z : entry.scale.z);
+                transform.localScale = s;
+                return;
+            }
+        }
+
+        // No override found â€” restore default (keep facing)
+        Vector3 def = defaultScale;
+        def.x = Mathf.Abs(def.x) * sign;
+        transform.localScale = def;
+    }
 }
 
 [System.Serializable]
@@ -1169,4 +1214,12 @@ public class SceneWalkSpeedOverride
 {
     public string sceneName;
     public float walkSpeed = 5f;
+}
+
+[System.Serializable]
+public class SceneScaleOverride
+{
+    public string sceneName;
+    [Tooltip("The localScale to use in this scene. X sign is handled automatically for facing.")]
+    public Vector3 scale = Vector3.one;
 }

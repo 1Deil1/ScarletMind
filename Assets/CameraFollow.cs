@@ -183,6 +183,29 @@ public class CameraFollow : MonoBehaviour
     public void SetMinY(float value)         { minY = value; }
     public float GetMinY()                   { return minY; }
 
+    /// <summary>
+    /// Instantly move the camera to the player's position (no smoothing).
+    /// Call after teleporting the player so the camera doesn't lerp from the old spot.
+    /// </summary>
+    public void SnapToTarget()
+    {
+        if (PlayerControlls.Instance == null) return;
+
+        Rigidbody2D playerRb = useRigidbodyPosition
+            ? PlayerControlls.Instance.GetComponent<Rigidbody2D>()
+            : null;
+
+        Vector3 playerPos = playerRb != null
+            ? new Vector3(playerRb.position.x, playerRb.position.y, PlayerControlls.Instance.transform.position.z)
+            : PlayerControlls.Instance.transform.position;
+
+        float y = Mathf.Max(playerPos.y + offset.y, minY);
+        if (useMaxY) y = Mathf.Min(y, maxY);
+
+        transform.position = new Vector3(playerPos.x + offset.x, y, playerPos.z + offset.z);
+        currentVelocity = Vector3.zero;
+    }
+
     public void SetZoomMultiplier(float value)
     {
         zoomMultiplier = Mathf.Max(0.01f, value);

@@ -44,6 +44,13 @@ public class DialogueTrigger : MonoBehaviour
 
     private float blockInputUntil = 0f;     // NEW: time until which E is ignored
 
+    private void OnDestroy()
+    {
+        // Clean up persistent UI elements when this trigger is destroyed (e.g. scene change)
+        if (promptUI != null) promptUI.SetActive(false);
+        if (enterPromptUI != null) enterPromptUI.SetActive(false);
+    }
+
     private void Start()
     {
         Debug.Log($"[DialogueTrigger] Start '{gameObject.name}'. promptUI: {promptUI != null}. Lines: {(Lines != null ? Lines.Length : 0)}");
