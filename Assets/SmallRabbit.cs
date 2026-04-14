@@ -28,8 +28,8 @@ public class SmallRabbit : MonoBehaviour
     private const string HoppingParameter = "isHopping";
     private const string AttackingParameter = "isAttacking";
     private const string DeadParameter = "isDead";
-    private const string AttackClipName = "attack";
-    private const string DeathClipName = "teleport";
+    private const string AttackClipName = "attack one-shot";
+    private const string DeathClipName = "Teleport-death";
 
     [Header("References")]
     public Transform playerTransform;
@@ -41,6 +41,16 @@ public class SmallRabbit : MonoBehaviour
     public LayerMask groundLayer;
     public Animator animator;
     public Rigidbody2D rb;
+
+    [Header("Spawn Activation")]
+    [SerializeField] private bool startDormantUntilSpawned = true;
+
+    [Header("Spawn Intro")]
+    [SerializeField] private bool playSpawnIntroAnimation = true;
+    [SerializeField] private string spawnIntroStateName = "Teleport-death";
+
+    [Header("Physics")]
+    [SerializeField] private float minimumGravityScale = 3f;
 
     [Header("Ground Check")]
     [SerializeField] private float groundCheckRadius = 0.12f;
@@ -58,6 +68,10 @@ public class SmallRabbit : MonoBehaviour
     private Collider2D primaryCollider;
     private Collider2D[] cachedColliders;
     private SpriteRenderer[] cachedSpriteRenderers;
+    private bool spawnActive;
+    private bool hasStarted;
+    private bool pendingSpawnIntro;
+    private bool isSpawnIntroPlaying;
 
     private void Reset()
     {
@@ -93,20 +107,51 @@ public class SmallRabbit : MonoBehaviour
         primaryCollider = GetComponent<Collider2D>();
         cachedColliders = GetComponentsInChildren<Collider2D>(true);
         cachedSpriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+        ConfigureDamageRelays();
 
+        rb.bodyType = RigidbodyType2D.Dynamic;
         rb.constraints |= RigidbodyConstraints2D.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        rb.gravityScale = Mathf.Max(rb.gravityScale, minimumGravityScale);
+
+        spawnActive = !startDormantUntilSpawned;
+        ApplySpawnActiveState();
     }
 
     private void Start()
     {
+        hasStarted = true;
+
+        if (!spawnActive)
+        {
+            return;
+        }
+
         AcquirePlayerIfNeeded();
+
+        if (pendingSpawnIntro && playSpawnIntroAnimation)
+        {
+            pendingSpawnIntro = false;
+            BeginSpawnIntro();
+            return;
+        }
+
         nextHopTime = Time.time + hopInterval;
         EnterState(State.Hopping);
     }
 
     private void Update()
     {
+        if (!spawnActive)
+        {
+            return;
+        }
+
+        if (isSpawnIntroPlaying)
+        {
+            return;
+        }
+
         AcquirePlayerIfNeeded();
 
         if (currentState == State.Dead || currentState == State.Attacking)
@@ -127,11 +172,43 @@ public class SmallRabbit : MonoBehaviour
     }
 
     /// <summary>
+    /// Activates a spawned SmallRabbit so it becomes visible, simulated, and starts hopping.
+    /// </summary>
+    public void ActivateSpawned()
+    {
+        if (spawnActive)
+        {
+            return;
+        }
+
+        spawnActive = true;
+        ApplySpawnActiveState();
+        PrepareAnimatorForSpawnIntro();
+
+        if (!hasStarted)
+        {
+            pendingSpawnIntro = playSpawnIntroAnimation;
+            return;
+        }
+
+        AcquirePlayerIfNeeded();
+
+        if (playSpawnIntroAnimation)
+        {
+            BeginSpawnIntro();
+            return;
+        }
+
+        nextHopTime = Time.time + hopInterval;
+        EnterState(State.Hopping);
+    }
+
+    /// <summary>
     /// Called by the player attack system when the SmallRabbit is struck.
     /// </summary>
     public void OnHit()
     {
-        if (currentState == State.Dead)
+        if (!spawnActive || currentState == State.Dead)
         {
             return;
         }
@@ -140,10 +217,10 @@ public class SmallRabbit : MonoBehaviour
     }
 
     /// <summary>
-    /// Compatibility hook for player attacks that still call TakeDamage(int).
+    /// Compatibility hook for player attacks that still call TakeDamage through SendMessage.
     /// </summary>
     /// <param name="damageAmount">Unused damage amount supplied by the player attack.</param>
-    public void TakeDamage(int damageAmount)
+    public void TakeDamage(object damageAmount)
     {
         OnHit();
     }
@@ -211,6 +288,8 @@ public class SmallRabbit : MonoBehaviour
         }
 
         currentState = newState;
+        isSpawnIntroPlaying = false;
+        pendingSpawnIntro = false;
 
         if (currentState == State.Hopping)
         {
@@ -330,8 +409,7 @@ public class SmallRabbit : MonoBehaviour
         float direction = playerTransform.position.x >= transform.position.x ? 1f : -1f;
         FaceDirection(direction);
 
-        rb.velocity = Vector2.zero;
-        rb.AddForce(new Vector2(direction * hopForceX, hopForceY), ForceMode2D.Impulse);
+        rb.velocity = new Vector2(direction * hopForceX, hopForceY);
         nextHopTime = Time.time + hopInterval;
     }
 
@@ -473,19 +551,152 @@ public class SmallRabbit : MonoBehaviour
         return 0f;
     }
 
+    private void BeginSpawnIntro()
+    {
+        if (!spawnActive || currentState == State.Dead)
+        {
+            return;
+        }
+
+        if (stateRoutine != null)
+        {
+            StopCoroutine(stateRoutine);
+            stateRoutine = null;
+        }
+
+        isSpawnIntroPlaying = true;
+
+        if (animator != null)
+        {
+            animator.SetBool(HoppingParameter, false);
+            animator.SetBool(AttackingParameter, false);
+            animator.SetBool(DeadParameter, false);
+
+            int introStateHash = Animator.StringToHash(spawnIntroStateName);
+            if (animator.HasState(0, introStateHash))
+            {
+                animator.Play(introStateHash, 0, 0f);
+                animator.Update(0f);
+            }
+        }
+
+        stateRoutine = StartCoroutine(SpawnIntroRoutine());
+    }
+
+    private IEnumerator SpawnIntroRoutine()
+    {
+        yield return new WaitForSeconds(GetClipWaitTime(DeathClipName));
+
+        if (!spawnActive || currentState == State.Dead)
+        {
+            yield break;
+        }
+
+        isSpawnIntroPlaying = false;
+        stateRoutine = null;
+        nextHopTime = Time.time + hopInterval;
+        EnterState(State.Hopping);
+    }
+
+    private void ConfigureDamageRelays()
+    {
+        for (int index = 0; index < cachedColliders.Length; index++)
+        {
+            Collider2D collider = cachedColliders[index];
+            if (collider == null || collider.gameObject == gameObject)
+            {
+                continue;
+            }
+
+            SmallRabbitDamageRelay relay = collider.GetComponent<SmallRabbitDamageRelay>();
+            if (relay == null)
+            {
+                relay = collider.gameObject.AddComponent<SmallRabbitDamageRelay>();
+            }
+
+            relay.Bind(this);
+        }
+    }
+
+    private void ApplySpawnActiveState()
+    {
+        if (animator != null)
+        {
+            animator.enabled = spawnActive;
+        }
+
+        for (int index = 0; index < cachedSpriteRenderers.Length; index++)
+        {
+            if (cachedSpriteRenderers[index] != null)
+            {
+                cachedSpriteRenderers[index].enabled = spawnActive;
+            }
+        }
+
+        for (int index = 0; index < cachedColliders.Length; index++)
+        {
+            if (cachedColliders[index] != null)
+            {
+                cachedColliders[index].enabled = spawnActive;
+            }
+        }
+
+        if (rb != null)
+        {
+            rb.simulated = spawnActive;
+            if (!spawnActive)
+            {
+                rb.velocity = Vector2.zero;
+            }
+        }
+    }
+
+    private void PrepareAnimatorForSpawnIntro()
+    {
+        if (animator == null || !spawnActive)
+        {
+            return;
+        }
+
+        animator.enabled = true;
+        animator.Rebind();
+        animator.Update(0f);
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
 
-        if (primaryCollider == null)
+        Collider2D collider = primaryCollider != null ? primaryCollider : GetComponent<Collider2D>();
+        if (collider == null)
         {
             return;
         }
 
-        Bounds bounds = primaryCollider.bounds;
+        Bounds bounds = collider.bounds;
         Vector2 checkPosition = new Vector2(bounds.center.x, bounds.min.y - groundCheckOffset);
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(checkPosition, groundCheckRadius);
+    }
+}
+
+internal sealed class SmallRabbitDamageRelay : MonoBehaviour
+{
+    private SmallRabbit owner;
+
+    public void Bind(SmallRabbit smallRabbit)
+    {
+        owner = smallRabbit;
+    }
+
+    public void OnHit()
+    {
+        owner?.OnHit();
+    }
+
+    public void TakeDamage(object damageAmount)
+    {
+        owner?.TakeDamage(damageAmount);
     }
 }

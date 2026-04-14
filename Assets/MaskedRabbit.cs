@@ -29,8 +29,8 @@ public class MaskedRabbit : MonoBehaviour
     private const string IdleParameter = "isIdle";
     private const string SpawningParameter = "isSpawning";
     private const string TeleportingParameter = "isTeleporting";
-    private const string SpawnClipName = "attack";
-    private const string TeleportClipName = "teleport";
+    private const string SpawnClipName = "attack one-shot";
+    private const string TeleportClipName = "teleport one-shot";
     private const int MaxHits = 4;
 
     [Header("References")]
@@ -42,6 +42,7 @@ public class MaskedRabbit : MonoBehaviour
     public Animator animator;
 
     [Header("Spawn Tuning")]
+    [SerializeField] private float spawnForwardDistance = 1.25f;
     [SerializeField] private float spawnOffsetX = 0.75f;
     [SerializeField] private float spawnOffsetY = 0.35f;
 
@@ -60,12 +61,14 @@ public class MaskedRabbit : MonoBehaviour
     private bool spawnedThisCycle;
     private bool teleportedThisCycle;
     private bool deathExecuted;
+    private int lastProcessedHitFrame = -1;
     private Coroutine stateRoutine;
     private Rigidbody2D rb;
     private Rigidbody2D playerRigidbody;
     private Collider2D primaryCollider;
     private Collider2D[] cachedColliders;
     private SpriteRenderer[] cachedSpriteRenderers;
+    private SpriteRenderer referenceSpriteRenderer;
 
     private void Reset()
     {
@@ -92,6 +95,13 @@ public class MaskedRabbit : MonoBehaviour
         primaryCollider = GetComponent<Collider2D>();
         cachedColliders = GetComponentsInChildren<Collider2D>(true);
         cachedSpriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+        referenceSpriteRenderer = GetComponent<SpriteRenderer>();
+        if (referenceSpriteRenderer == null && cachedSpriteRenderers.Length > 0)
+        {
+            referenceSpriteRenderer = cachedSpriteRenderers[0];
+        }
+
+        ConfigureDamageRelays();
 
         rb.constraints |= RigidbodyConstraints2D.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -131,6 +141,13 @@ public class MaskedRabbit : MonoBehaviour
             return;
         }
 
+        if (lastProcessedHitFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        lastProcessedHitFrame = Time.frameCount;
+
         ApplyKnockbackToPlayer();
         hitCount++;
 
@@ -144,10 +161,10 @@ public class MaskedRabbit : MonoBehaviour
     }
 
     /// <summary>
-    /// Compatibility hook for player attacks that still call TakeDamage(int).
+    /// Compatibility hook for player attacks that still call TakeDamage through SendMessage.
     /// </summary>
     /// <param name="damageAmount">Unused damage amount supplied by the player attack.</param>
-    public void TakeDamage(int damageAmount)
+    public void TakeDamage(object damageAmount)
     {
         OnHit();
     }
@@ -157,24 +174,7 @@ public class MaskedRabbit : MonoBehaviour
     /// </summary>
     public void SpawnSmallRabbit()
     {
-        if (currentState != State.Spawning || spawnedThisCycle || smallRabbitPrefab == null)
-        {
-            return;
-        }
-
-        spawnedThisCycle = true;
-
-        Vector3 spawnPosition = transform.position + new Vector3(
-            UnityEngine.Random.Range(-spawnOffsetX, spawnOffsetX),
-            UnityEngine.Random.Range(0f, spawnOffsetY),
-            0f);
-
-        GameObject spawnedRabbit = Instantiate(smallRabbitPrefab, spawnPosition, Quaternion.identity);
-        SmallRabbit smallRabbit = spawnedRabbit.GetComponent<SmallRabbit>();
-        if (smallRabbit != null && smallRabbit.playerTransform == null && playerTransform != null)
-        {
-            smallRabbit.playerTransform = playerTransform;
-        }
+        TrySpawnSmallRabbit();
     }
 
     /// <summary>
@@ -285,6 +285,11 @@ public class MaskedRabbit : MonoBehaviour
         if (currentState != expectedState)
         {
             yield break;
+        }
+
+        if (expectedState == State.Spawning && !spawnedThisCycle)
+        {
+            TrySpawnSmallRabbit();
         }
 
         stateRoutine = null;
@@ -438,6 +443,85 @@ public class MaskedRabbit : MonoBehaviour
         return 0f;
     }
 
+    private bool TrySpawnSmallRabbit()
+    {
+        if (currentState != State.Spawning || spawnedThisCycle || smallRabbitPrefab == null)
+        {
+            return false;
+        }
+
+        spawnedThisCycle = true;
+
+        Vector3 spawnPosition = CalculateSpawnPosition();
+        GameObject spawnedRabbit = Instantiate(smallRabbitPrefab, spawnPosition, Quaternion.identity);
+        SmallRabbit smallRabbit = spawnedRabbit.GetComponentInChildren<SmallRabbit>(true);
+        if (smallRabbit == null)
+        {
+            Debug.LogWarning($"MaskedRabbit '{name}' spawned prefab '{smallRabbitPrefab.name}', but no SmallRabbit component was found on the prefab root or its children.");
+            return true;
+        }
+
+        if (smallRabbit.playerTransform == null && playerTransform != null)
+        {
+            smallRabbit.playerTransform = playerTransform;
+        }
+
+        smallRabbit.ActivateSpawned();
+        return true;
+    }
+
+    private Vector3 CalculateSpawnPosition()
+    {
+        float facingDirection = GetFacingDirection();
+        float forwardDistance = Mathf.Max(0.1f, Mathf.Max(Mathf.Abs(spawnOffsetX), spawnForwardDistance));
+        float verticalOffset = Mathf.Max(0f, spawnOffsetY);
+
+        return transform.position + new Vector3(facingDirection * forwardDistance, verticalOffset, 0f);
+    }
+
+    private float GetFacingDirection()
+    {
+        float scaleDirection = Mathf.Abs(transform.localScale.x) > 0.001f
+            ? Mathf.Sign(transform.localScale.x)
+            : 1f;
+
+        if (referenceSpriteRenderer != null)
+        {
+            float visualDirection = scaleDirection * (referenceSpriteRenderer.flipX ? -1f : 1f);
+            if (Mathf.Abs(visualDirection) > 0.001f)
+            {
+                return visualDirection;
+            }
+        }
+
+        if (playerTransform != null)
+        {
+            return playerTransform.position.x >= transform.position.x ? 1f : -1f;
+        }
+
+        return scaleDirection;
+    }
+
+    private void ConfigureDamageRelays()
+    {
+        for (int index = 0; index < cachedColliders.Length; index++)
+        {
+            Collider2D collider = cachedColliders[index];
+            if (collider == null || collider.gameObject == gameObject)
+            {
+                continue;
+            }
+
+            MaskedRabbitDamageRelay relay = collider.GetComponent<MaskedRabbitDamageRelay>();
+            if (relay == null)
+            {
+                relay = collider.gameObject.AddComponent<MaskedRabbitDamageRelay>();
+            }
+
+            relay.Bind(this);
+        }
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -451,5 +535,25 @@ public class MaskedRabbit : MonoBehaviour
             Gizmos.DrawWireSphere(leftTarget, 0.2f);
             Gizmos.DrawWireSphere(rightTarget, 0.2f);
         }
+    }
+}
+
+internal sealed class MaskedRabbitDamageRelay : MonoBehaviour
+{
+    private MaskedRabbit owner;
+
+    public void Bind(MaskedRabbit maskedRabbit)
+    {
+        owner = maskedRabbit;
+    }
+
+    public void OnHit()
+    {
+        owner?.OnHit();
+    }
+
+    public void TakeDamage(object damageAmount)
+    {
+        owner?.TakeDamage(damageAmount);
     }
 }
