@@ -171,7 +171,7 @@ MonoBehaviour:
   playerTransform: {fileID: 0}
   hopForceX: 8
   hopForceY: 6
-  hopInterval: 1.2
+  hopInterval: 1
   attackRange: 4
   damage: 5
   groundLayer:
@@ -192,6 +192,7 @@ MonoBehaviour:
   animationEntryDelay: 0.05
   animationFallbackDuration: 0.5
   destroyDelayOnHit: 0
+  maxHealth: 3
   attackHitSfx: {fileID: 8300000, guid: af9198d8e78c94b4083dd4c54d42e676, type: 3}
   attackMissSfx: {fileID: 8300000, guid: 96c661e654f29394d9a1df6456c2153a, type: 3}
   hopSfx: {fileID: 8300000, guid: 2236379a5d900e342832a43fb349d53d, type: 3}

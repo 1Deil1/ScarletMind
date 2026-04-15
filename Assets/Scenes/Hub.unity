@@ -5696,20 +5696,20 @@ MonoBehaviour:
     onlyFirstTime: 1
     playerPrefKey: 
     startDelay: 0.5
-  - sceneName: 
+  - sceneName: Hub_ROOM
     lines:
-    - speaker: 
-      text: 3453453453
+    - speaker: MAYA
+      text: 'WASD - Move                 Q - Slow Time / Critical hit
+
+        C
+        - Slide                           R click - Attack
+
+        Space - Jump
+
+        Shift
+        - Dash'
       leftPortrait: {fileID: 0}
-      rightPortrait: {fileID: 0}
-    - speaker: 
-      text: 3453453453
-      leftPortrait: {fileID: 0}
-      rightPortrait: {fileID: 0}
-    - speaker: 
-      text: 3453453453
-      leftPortrait: {fileID: 0}
-      rightPortrait: {fileID: 0}
+      rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
     onlyFirstTime: 1
     playerPrefKey: 
     startDelay: 0.5
@@ -6206,68 +6206,67 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Lines:
-  - speaker: "MAYA (vn\xFAtorn\xFD monol\xF3g):"
-    text: "\u201EVzduch tu p\xE1chne dezinfekciou a my\u0161lienkami, ktor\xE9 sa
-      nechc\xFA pohn\xFA\u0165 \u010Falej.\u201C"
-    leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
-  - speaker: "MAYA (vn\xFAtorn\xFD monol\xF3g):"
-    text: "\u201E\u013Dudia okolo m\u0148a pozeraj\xFA skrz, akoby som sem u\u017E
-      patrila.\u201C\n\n(Maya sa zastav\xED pri posteli. Pacient le\u017E\xED nehybne.)"
-    leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
-    text: "\u201EAhoj\u2026 po\u010Duje\u0161 ma?\u201C"
+    text: "\u201CThe air here reeks of disinfectant and thoughts that refuse to move
+      on.\u201D"
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+  - speaker: 'MAYA:'
+    text: "\u201CThe people around me look right through me, as if I already belong
+      here.\u201D\n\n(Maya stops by the bed. The patient lies motionless.)"
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
+  - speaker: 'MAYA:'
+    text: "\"Hi\u2026 can you hear me?\""
+    leftPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'PACIENT:'
-    text: "(PACIENT ml\u010D\xED.)"
+    text: (The patient remains silent.)
     leftPortrait: {fileID: 0}
     rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
-    text: "\u201EPovedali mi, \u017Ee rozpr\xE1vanie pom\xE1ha. Neviem ale, komu
-      vlastne.\u201C"
+    text: "\u201CThey told me that talking helps. But I don\u2019t know who, exactly.\u201D"
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'MAYA:'
-    text: "\u201EPam\xE4t\xE1\u0161 si, ako si sa sem dostal?\u201C"
+    text: "\u201CDo you remember how you got here?\u201D"
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'PACIENT:'
-    text: "(PACIENT ml\u010D\xED.)"
+    text: (The patient remains silent.)
     leftPortrait: {fileID: 0}
     rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
-    text: "\u201EAlebo si na to rad\u0161ej nechce\u0161 spomen\xFA\u0165.\u201C"
+    text: "\u201COr maybe you\u2019d rather not think about it.\u201D"
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'MAYA:'
-    text: "\u201ECh\xE1pem to.\u201C\n\n(Kr\xE1tka pauza.)"
+    text: "\u201CI understand.\u201D\n\n(A short pause.)"
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'MAYA:'
-    text: "\u201EJe tu ticho. A pritom tu nie som sama.\u201C"
+    text: "\u201CIt\u2019s quiet here. And yet I\u2019m not alone.\u201D"
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'PACIENT:'
-    text: "(PACIENT ml\u010D\xED.)"
+    text: (The patient remains silent.)
     leftPortrait: {fileID: 0}
     rightPortrait: {fileID: 0}
   - speaker: 'MAYA:'
-    text: "\u201EJa som Maya.\u201C"
+    text: '"My name is Maya."'
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   - speaker: 'PACIENT:'
-    text: (Bez odpovede.)
+    text: (No response.)
     leftPortrait: {fileID: 0}
     rightPortrait: {fileID: 0}
-  - speaker: 'MAYA (ticho, pre seba):'
-    text: "\u201EAsi budem dnes hovori\u0165 za n\xE1s oboch.\u201C"
+  - speaker: 'MAYA:'
+    text: '"I guess I''ll speak for both of us today."'
     leftPortrait: {fileID: 0}
-    rightPortrait: {fileID: 0}
+    rightPortrait: {fileID: 21300000, guid: 88f7b167067d94443ba3e73b59ec2c58, type: 3}
   promptUI: {fileID: 1745777364}
   interactKey: 101
-  teleportKey: 116
+  teleportKey: 0
   promptButton: {fileID: 0}
   requireDialogueBeforeTeleport: 1
   enterPromptUI: {fileID: 0}
@@ -6307,7 +6306,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1634531747}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 35.43, y: 17.61, z: -0.11587783}
+  m_LocalPosition: {x: 35.43, y: 27.38, z: -0.11587783}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

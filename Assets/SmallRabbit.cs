@@ -72,6 +72,9 @@ public class SmallRabbit : MonoBehaviour
     [Header("Death")]
     [SerializeField] private float destroyDelayOnHit;
 
+    [Header("Health")]
+    [SerializeField] private int maxHealth = 1;
+
     [Header("Audio - Enemy SFX")]
     [SerializeField] private AudioClip attackHitSfx;
     [SerializeField] private AudioClip attackMissSfx;
@@ -97,6 +100,7 @@ public class SmallRabbit : MonoBehaviour
     private bool pendingSpawnIntro;
     private bool isSpawnIntroPlaying;
     private Vector3 facingTransformBaseScale = Vector3.one;
+    private int currentHealth;
 
     private void Reset()
     {
@@ -157,6 +161,8 @@ public class SmallRabbit : MonoBehaviour
 
         facingTransformBaseScale = facingTransform != null ? facingTransform.localScale : transform.localScale;
         ConfigureDamageRelays();
+
+        currentHealth = Mathf.Max(1, maxHealth);
 
         rb.bodyType = RigidbodyType2D.Dynamic;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -261,21 +267,40 @@ public class SmallRabbit : MonoBehaviour
     /// </summary>
     public void OnHit()
     {
+        ApplyDamage(1);
+    }
+
+    public void TakeDamage(object damageAmount)
+    {
+        int parsedDamage = 1;
+        if (damageAmount is int intDamage)
+        {
+            parsedDamage = intDamage;
+        }
+        else if (damageAmount != null)
+        {
+            int.TryParse(damageAmount.ToString(), out parsedDamage);
+            if (parsedDamage <= 0)
+            {
+                parsedDamage = 1;
+            }
+        }
+
+        ApplyDamage(parsedDamage);
+    }
+
+    private void ApplyDamage(int damageAmount)
+    {
         if (!spawnActive || currentState == State.Dead)
         {
             return;
         }
 
-        DieImmediately();
-    }
-
-    /// <summary>
-    /// Compatibility hook for player attacks that still call TakeDamage through SendMessage.
-    /// </summary>
-    /// <param name="damageAmount">Unused damage amount supplied by the player attack.</param>
-    public void TakeDamage(object damageAmount)
-    {
-        OnHit();
+        currentHealth -= Mathf.Max(1, damageAmount);
+        if (currentHealth <= 0)
+        {
+            DieImmediately();
+        }
     }
 
     /// <summary>
