@@ -132,10 +132,22 @@ public class PlayerControlls : MonoBehaviour
 
     // Game Over / Ending
     [Header("Game Over")]
-    [Tooltip("Scene to load when sanity reaches zero.")]
+    [Tooltip("Fallback scene to load when sanity reaches zero and recovery is disabled.")]
     [SerializeField] private string endingSceneName = "Ending";
-    [Tooltip("Optional delay before switching to the ending scene.")]
+    [Tooltip("Optional delay before switching scenes after sanity reaches zero.")]
     [SerializeField] private float gameOverDelay = 0.75f;
+
+    [Header("Defeat Recovery")]
+    [Tooltip("If enabled, zero sanity sends the player to a safe recovery scene instead of the Ending scene.")]
+    [SerializeField] private bool recoverToHubRoomOnZeroSanity = true;
+    [Tooltip("Number of consecutive defeats allowed before the Ending scene is loaded.")]
+    [SerializeField] private int defeatsBeforeEnding = 3;
+    [Tooltip("Scene loaded when the player is defeated.")]
+    [SerializeField] private string recoverySceneName = "Hub_ROOM";
+    [Tooltip("Optional spawn id used in the recovery scene. Leave empty to use that scene's default spawn.")]
+    [SerializeField] private string recoverySpawnId = "default";
+    [Tooltip("Sanity restored before entering the recovery scene.")]
+    [SerializeField] private int recoverySanity = 50;
 
     private bool isGameOverTriggered = false;
     private bool isLoadingScene      = false;
@@ -147,6 +159,9 @@ public class PlayerControlls : MonoBehaviour
 
     private const string PrefKeySanity = "PLAYER_SANITY";
     private const string PrefKeyHubVisited = "HUB_VISITED";
+    private const string PrefKeyDefeatStreak = "PLAYER_DEFEAT_STREAK";
+
+    private int defeatStreak = 0;
 
     [Tooltip("Optional: assign UI Slider. If null, a temp persistent one is created.")]
     [SerializeField] private Slider sanitySlider;
@@ -209,8 +224,11 @@ public class PlayerControlls : MonoBehaviour
         {
             PlayerPrefs.DeleteKey(PrefKeySanity);
             PlayerPrefs.DeleteKey(PrefKeyHubVisited);
+            PlayerPrefs.DeleteKey(PrefKeyDefeatStreak);
             PlayerPrefs.Save();
         }
+
+        defeatStreak = Mathf.Max(0, PlayerPrefs.GetInt(PrefKeyDefeatStreak, 0));
 
         sanity = PlayerPrefs.HasKey(PrefKeySanity)
             ? Mathf.Clamp(PlayerPrefs.GetInt(PrefKeySanity, sanity), 0, maxSanity)
@@ -283,6 +301,9 @@ public class PlayerControlls : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        RefreshRuntimeReferences();
+        ResetTransientStateAfterSceneLoad();
+
         EnsureSanityUI();
         UpdateSanityUI();
 
@@ -307,6 +328,51 @@ public class PlayerControlls : MonoBehaviour
         ApplySceneSpawn();
         PersistSanity();
         OnSanityChanged?.Invoke(sanity, maxSanity);
+    }
+
+    private void RefreshRuntimeReferences()
+    {
+        if (rb == null) rb = GetComponent<Rigidbody2D>();
+        if (anim == null) anim = GetComponent<Animator>();
+
+        if (rb != null)
+        {
+            originalGravityScale = rb.gravityScale;
+            if (enableRigidbodyInterpolation)
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
+    }
+
+    private void ResetTransientStateAfterSceneLoad()
+    {
+        enabled = true;
+        isGameOverTriggered = false;
+        isLoadingScene = false;
+        inputLocked = false;
+        isDashing = false;
+        isPostDashHang = false;
+        isSliding = false;
+        inputHoldTimer = 0f;
+        retainedXAxis = 0f;
+        xAxis = 0f;
+        actionLockedUntil = 0f;
+        jumpsLeft = maxJumps;
+        nextPlayerStepTime = 0f;
+
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.gravityScale = originalGravityScale;
+        }
+
+        if (anim != null)
+        {
+            anim.SetBool("running", false);
+            anim.SetBool("jumping", false);
+        }
+
+        ReturnToLocomotion(0f);
     }
 
     // ---- Scene spawn ----
@@ -690,6 +756,7 @@ public class PlayerControlls : MonoBehaviour
     // ---- Sanity API ----
     public int MaxSanity => maxSanity;
     public int CurrentSanity => sanity;
+    public bool IsSceneTransferInProgress => isGameOverTriggered || isLoadingScene;
 
     public void SetSanity(int value)
     {
@@ -706,6 +773,28 @@ public class PlayerControlls : MonoBehaviour
     {
         if (amount <= 0 || isLoadingScene) return;
         SetSanity(sanity - amount);
+    }
+
+    public void TakeDamage(int amount)
+    {
+        TakeSanityDamage(amount);
+    }
+
+    public void TakeDamage(object damageObj)
+    {
+        if (isLoadingScene || damageObj == null) return;
+
+        int amount = 0;
+        if (damageObj is int intDamage)
+        {
+            amount = intDamage;
+        }
+        else
+        {
+            int.TryParse(damageObj.ToString(), out amount);
+        }
+
+        TakeSanityDamage(amount);
     }
 
     public void RestoreSanity(int amount)
@@ -819,7 +908,10 @@ public class PlayerControlls : MonoBehaviour
     {
         PlayerPrefs.DeleteKey(PrefKeySanity);
         PlayerPrefs.DeleteKey(PrefKeyHubVisited);
+        PlayerPrefs.DeleteKey(PrefKeyDefeatStreak);
         PlayerPrefs.Save();
+
+        defeatStreak = 0;
 
         sanity = Mathf.Clamp(sanity, 0, maxSanity);
         UpdateSanityUI();
@@ -829,6 +921,12 @@ public class PlayerControlls : MonoBehaviour
     private void PersistSanity()
     {
         PlayerPrefs.SetInt(PrefKeySanity, sanity);
+        PlayerPrefs.Save();
+    }
+
+    private void PersistDefeatStreak()
+    {
+        PlayerPrefs.SetInt(PrefKeyDefeatStreak, defeatStreak);
         PlayerPrefs.Save();
     }
 
@@ -1089,18 +1187,41 @@ public class PlayerControlls : MonoBehaviour
         // Optional: play a death/KO animation if you have one
         // CrossFadeIfExists("Death", 0.05f, 0);
 
-        // Delay then switch to ending scene
-        StartCoroutine(LoadEndingAfterDelay());
+        // Delay then switch to recovery or ending scene
+        StartCoroutine(LoadDefeatDestinationAfterDelay());
     }
 
-    private IEnumerator LoadEndingAfterDelay()
+    private IEnumerator LoadDefeatDestinationAfterDelay()
     {
         if (gameOverDelay > 0f)
             yield return new WaitForSeconds(gameOverDelay);
 
+        defeatStreak = Mathf.Max(0, defeatStreak) + 1;
+        PersistDefeatStreak();
+
+        bool shouldRecoverToHubRoom =
+            recoverToHubRoomOnZeroSanity &&
+            !string.IsNullOrEmpty(recoverySceneName) &&
+            defeatStreak < Mathf.Max(1, defeatsBeforeEnding);
+
+        if (shouldRecoverToHubRoom)
+        {
+            isLoadingScene = true;
+            sanity = Mathf.Clamp(GetRecoverySanityValue(), 1, maxSanity);
+            UpdateSanityUI();
+            PersistSanity();
+            OnSanityChanged?.Invoke(sanity, maxSanity);
+
+            SceneSpawnState.NextSpawnId = string.IsNullOrEmpty(recoverySpawnId) ? null : recoverySpawnId;
+            SceneFader.LoadScene(recoverySceneName, LoadSceneMode.Single);
+            yield break;
+        }
+
         if (!string.IsNullOrEmpty(endingSceneName))
         {
             isLoadingScene = true;
+            defeatStreak = 0;
+            PersistDefeatStreak();
             SceneSpawnState.NextSpawnId = null;
             SceneFader.LoadScene(endingSceneName, LoadSceneMode.Single);
         }
@@ -1108,6 +1229,17 @@ public class PlayerControlls : MonoBehaviour
         {
             Debug.LogWarning("Ending scene name is empty. Set 'endingSceneName' in PlayerControlls.");
         }
+    }
+
+    private int GetRecoverySanityValue()
+    {
+        if (recoverySanity > 0)
+            return recoverySanity;
+
+        if (hubFirstEnterSanity > 0)
+            return hubFirstEnterSanity;
+
+        return Mathf.Max(1, maxSanity / 2);
     }
 
     private void HandleFootsteps()

@@ -15,6 +15,8 @@ public class MaskedRabbit : MonoBehaviour
     - Add Animation Events named SpawnSmallRabbit on the attack clip, ExecuteTeleport on the teleport clip used for normal teleports, and ExecuteDeath on the teleport clip used for the death/disappear sequence.
     - Put valid platform colliders on layers included by groundLayer so teleport ground snapping can find a landing spot.
     - Keep the main damageable Collider2D on this same GameObject so PlayerControlls.SendMessage("TakeDamage", ...) reaches this script.
+    - Assign facingSpriteRenderer if the visible sprite is on a child object or uses SpriteRenderer.flipX.
+    - If the rabbit still looks backwards when turning toward the player, enable invertFacingDirection in the Inspector.
     */
 
     private enum State
@@ -41,6 +43,12 @@ public class MaskedRabbit : MonoBehaviour
     public Transform playerTransform;
     public Animator animator;
 
+    [Header("Facing")]
+    [SerializeField] private SpriteRenderer facingSpriteRenderer;
+    [SerializeField] private Transform facingTransform;
+    [SerializeField] private bool useSpriteFlip = true;
+    [SerializeField] private bool invertFacingDirection;
+
     [Header("Spawn Tuning")]
     [SerializeField] private float spawnForwardDistance = 1.25f;
     [SerializeField] private float spawnOffsetX = 0.75f;
@@ -55,6 +63,7 @@ public class MaskedRabbit : MonoBehaviour
     [Header("Animation Timing")]
     [SerializeField] private float animationEntryDelay = 0.05f;
     [SerializeField] private float animationFallbackDuration = 0.8f;
+    [SerializeField] [Range(0f, 1f)] private float teleportFallbackNormalizedTime = 0.5f;
 
     private State currentState = State.Idle;
     private int hitCount;
@@ -68,11 +77,14 @@ public class MaskedRabbit : MonoBehaviour
     private Collider2D primaryCollider;
     private Collider2D[] cachedColliders;
     private SpriteRenderer[] cachedSpriteRenderers;
-    private SpriteRenderer referenceSpriteRenderer;
+    private Vector3 facingTransformBaseScale = Vector3.one;
+    private float currentFacingDirection = 1f;
 
     private void Reset()
     {
         animator = GetComponent<Animator>();
+        facingTransform = transform;
+        facingSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     private void OnValidate()
@@ -80,6 +92,16 @@ public class MaskedRabbit : MonoBehaviour
         if (animator == null)
         {
             animator = GetComponent<Animator>();
+        }
+
+        if (facingTransform == null)
+        {
+            facingTransform = transform;
+        }
+
+        if (facingSpriteRenderer == null)
+        {
+            facingSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
         }
     }
 
@@ -95,15 +117,22 @@ public class MaskedRabbit : MonoBehaviour
         primaryCollider = GetComponent<Collider2D>();
         cachedColliders = GetComponentsInChildren<Collider2D>(true);
         cachedSpriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
-        referenceSpriteRenderer = GetComponent<SpriteRenderer>();
-        if (referenceSpriteRenderer == null && cachedSpriteRenderers.Length > 0)
+
+        if (facingTransform == null)
         {
-            referenceSpriteRenderer = cachedSpriteRenderers[0];
+            facingTransform = transform;
         }
+
+        if (facingSpriteRenderer == null && cachedSpriteRenderers.Length > 0)
+        {
+            facingSpriteRenderer = cachedSpriteRenderers[0];
+        }
+
+        facingTransformBaseScale = facingTransform != null ? facingTransform.localScale : transform.localScale;
+        currentFacingDirection = ComputeVisualFacingDirection();
 
         ConfigureDamageRelays();
 
-        rb.constraints |= RigidbodyConstraints2D.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
 
@@ -116,6 +145,11 @@ public class MaskedRabbit : MonoBehaviour
     private void Update()
     {
         AcquirePlayerReferences();
+
+        if (currentState != State.Dying)
+        {
+            FacePlayer();
+        }
 
         if (currentState == State.Idle && IsPlayerWithinDetectionRange())
         {
@@ -280,7 +314,36 @@ public class MaskedRabbit : MonoBehaviour
 
     private IEnumerator FinishAfterAnimation(State expectedState, string clipName, State nextState)
     {
-        yield return new WaitForSeconds(GetClipWaitTime(clipName));
+        float totalWait = GetClipWaitTime(clipName);
+
+        if (expectedState == State.Teleporting)
+        {
+            float fallbackDelay = Mathf.Clamp(totalWait * teleportFallbackNormalizedTime, 0f, totalWait);
+            if (fallbackDelay > 0f)
+            {
+                yield return new WaitForSeconds(fallbackDelay);
+            }
+
+            if (currentState != expectedState)
+            {
+                yield break;
+            }
+
+            if (!teleportedThisCycle)
+            {
+                ExecuteTeleport();
+            }
+
+            float remainingDelay = Mathf.Max(0f, totalWait - fallbackDelay);
+            if (remainingDelay > 0f)
+            {
+                yield return new WaitForSeconds(remainingDelay);
+            }
+        }
+        else
+        {
+            yield return new WaitForSeconds(totalWait);
+        }
 
         if (currentState != expectedState)
         {
@@ -378,13 +441,20 @@ public class MaskedRabbit : MonoBehaviour
             return currentPosition;
         }
 
-        float sideFromPlayer = transform.position.x >= playerTransform.position.x ? -1f : 1f;
-        if (Mathf.Approximately(transform.position.x, playerTransform.position.x))
+        float playerFacingDirection = playerTransform.localScale.x >= 0f ? 1f : -1f;
+        float sideFromPlayer = -playerFacingDirection;
+        if (Mathf.Approximately(playerFacingDirection, 0f))
         {
-            sideFromPlayer = playerTransform.localScale.x >= 0f ? -1f : 1f;
+            sideFromPlayer = playerTransform.position.x >= transform.position.x ? -1f : 1f;
         }
 
         Vector2 targetPosition = new Vector2(playerTransform.position.x + (sideFromPlayer * teleportDistance), currentPosition.y);
+
+        if (Mathf.Abs(targetPosition.x - currentPosition.x) < 0.1f)
+        {
+            sideFromPlayer *= -1f;
+            targetPosition.x = playerTransform.position.x + (sideFromPlayer * teleportDistance);
+        }
 
         if (groundLayer.value == 0)
         {
@@ -481,17 +551,9 @@ public class MaskedRabbit : MonoBehaviour
 
     private float GetFacingDirection()
     {
-        float scaleDirection = Mathf.Abs(transform.localScale.x) > 0.001f
-            ? Mathf.Sign(transform.localScale.x)
-            : 1f;
-
-        if (referenceSpriteRenderer != null)
+        if (Mathf.Abs(currentFacingDirection) > 0.001f)
         {
-            float visualDirection = scaleDirection * (referenceSpriteRenderer.flipX ? -1f : 1f);
-            if (Mathf.Abs(visualDirection) > 0.001f)
-            {
-                return visualDirection;
-            }
+            return Mathf.Sign(currentFacingDirection);
         }
 
         if (playerTransform != null)
@@ -499,7 +561,66 @@ public class MaskedRabbit : MonoBehaviour
             return playerTransform.position.x >= transform.position.x ? 1f : -1f;
         }
 
-        return scaleDirection;
+        return 1f;
+    }
+
+    private float ComputeVisualFacingDirection()
+    {
+        if (useSpriteFlip && facingSpriteRenderer != null)
+        {
+            return facingSpriteRenderer.flipX ? -1f : 1f;
+        }
+
+        Transform targetTransform = facingTransform != null ? facingTransform : transform;
+        float visualDirection = Mathf.Abs(targetTransform.localScale.x) > 0.001f
+            ? Mathf.Sign(targetTransform.localScale.x)
+            : 1f;
+
+        return visualDirection;
+    }
+
+    private void FacePlayer()
+    {
+        if (playerTransform == null)
+        {
+            return;
+        }
+
+        float direction = playerTransform.position.x >= transform.position.x ? 1f : -1f;
+        FaceDirection(direction);
+    }
+
+    private void FaceDirection(float direction)
+    {
+        if (Mathf.Abs(direction) <= 0.001f)
+        {
+            return;
+        }
+
+        float desiredDirection = invertFacingDirection ? -Mathf.Sign(direction) : Mathf.Sign(direction);
+
+        if (useSpriteFlip && facingSpriteRenderer != null)
+        {
+            facingSpriteRenderer.flipX = desiredDirection < 0f;
+        }
+
+        Transform targetTransform = facingTransform != null ? facingTransform : transform;
+        Vector3 baseScale = facingTransform != null ? facingTransformBaseScale : transform.localScale;
+        Vector3 localScale = targetTransform.localScale;
+
+        if (useSpriteFlip && facingSpriteRenderer != null)
+        {
+            localScale.x = Mathf.Abs(baseScale.x);
+        }
+        else
+        {
+            localScale.x = Mathf.Abs(baseScale.x) * desiredDirection;
+        }
+
+        localScale.y = baseScale.y;
+        localScale.z = baseScale.z;
+        targetTransform.localScale = localScale;
+        currentFacingDirection = ComputeVisualFacingDirection();
     }
 
     private void ConfigureDamageRelays()

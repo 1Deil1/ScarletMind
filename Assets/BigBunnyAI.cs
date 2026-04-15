@@ -71,6 +71,12 @@ public class BigBunnyAI : MonoBehaviour
     [SerializeField] private AudioClip enemyAttackMissSfx;
     [Tooltip("Sound played when the bunny starts a hop.")]
     [SerializeField] private AudioClip bunnyJumpSfx;
+    [SerializeField] private bool playAttackHitSfx = true;
+    [SerializeField] private bool playAttackMissSfx = true;
+    [SerializeField] private bool playJumpSfx = true;
+    [Range(0f, 1f)] [SerializeField] private float attackHitSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float attackMissSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float bunnyJumpSfxVolume = 1f;
 
     private Rigidbody2D rb;
     private Collider2D col;
@@ -197,8 +203,8 @@ public class BigBunnyAI : MonoBehaviour
         rb.velocity = v;
         rb.AddForce(Vector2.up * hopForceY, ForceMode2D.Impulse);
 
-        if (bunnyJumpSfx != null)
-            AudioManager.PlaySfxAt(bunnyJumpSfx, transform.position, 1f);
+        if (playJumpSfx && bunnyJumpSfx != null)
+            AudioManager.PlaySfxAt(bunnyJumpSfx, transform.position, bunnyJumpSfxVolume);
 
         // Remain in Hopping until we land (handled in FixedUpdate)
         // Safety timeout in case of odd collisions
@@ -239,7 +245,9 @@ public class BigBunnyAI : MonoBehaviour
             else { var taggedPlayer = GameObject.FindWithTag("Player"); if (taggedPlayer != null) Debug.Log("BigBunny hit the player (no PlayerControlls.Instance found)."); }
         }
         var clip = hit ? enemyAttackHitSfx : enemyAttackMissSfx;
-        if (clip != null) AudioManager.PlaySfxAt(clip, transform.position, 1f);
+        float clipVolume = hit ? attackHitSfxVolume : attackMissSfxVolume;
+        bool shouldPlayClip = hit ? playAttackHitSfx : playAttackMissSfx;
+        if (shouldPlayClip && clip != null) AudioManager.PlaySfxAt(clip, transform.position, clipVolume);
 
         // Finish cooldown before resuming chase
         float remaining = Mathf.Max(0f, (lastAttackTime + attackCooldown) - Time.time);
@@ -380,7 +388,7 @@ public class BigBunnyAI : MonoBehaviour
         originalHopSpeed = hopHorizontalSpeed;
         originalHopForce = hopForceY;
 
-        // Interrupt whatever the bunny was doing — land it immediately
+        // Interrupt whatever the bunny was doing ï¿½ land it immediately
         state = State.Idle;
         if (rb != null) rb.velocity = Vector2.zero;
         UpdateVisualState();

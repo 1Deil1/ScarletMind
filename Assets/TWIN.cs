@@ -116,12 +116,12 @@ public class TWIN : MonoBehaviour
             yield break;
         }
 
-        // disable player controls if PlayerControlls exists
+        // temporarily lock player controls during knockback
         var pc = player.GetComponent<PlayerControlls>();
         if (pc != null)
         {
-            pc.enabled = false;
-            Debug.Log("[TWIN] PlayerControlls disabled for knockback");
+            pc.SetInputLocked(true);
+            Debug.Log("[TWIN] PlayerControlls input locked for knockback");
         }
 
         // compute required horizontal speed to traverse knockbackDistance in knockbackTravelTime
@@ -156,6 +156,12 @@ public class TWIN : MonoBehaviour
 
         // short pause to show result
         yield return new WaitForSeconds(0.15f);
+
+        if (pc != null && !pc.IsSceneTransferInProgress)
+        {
+            pc.SetInputLocked(false);
+            Debug.Log("[TWIN] PlayerControlls input unlocked after knockback");
+        }
 
     }
 

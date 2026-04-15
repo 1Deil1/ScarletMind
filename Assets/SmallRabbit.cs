@@ -12,10 +12,13 @@ public class SmallRabbit : MonoBehaviour
     /*
     Unity Editor setup:
     - Create Animator bool parameters named isHopping, isAttacking, and isDead.
-    - Add Animation Events named DealDamage on the attack clip and ExecuteDeath on the teleport/death clip.
+    - Add an Animation Event named DealDamage on the attack clip.
     - Put valid platform colliders on layers included by groundLayer so the grounded hop check works.
     - Keep the main damageable Collider2D on this same GameObject so PlayerControlls.SendMessage("TakeDamage", ...) reaches this script.
     - Ensure the player GameObject uses tag Player and has a Rigidbody2D plus either a TakeDamage(int) receiver or the existing PlayerControlls component.
+    - Assign facingSpriteRenderer if the visible sprite is on a child object or uses SpriteRenderer.flipX.
+    - If the rabbit still looks backwards when moving toward the player, enable invertFacingDirection in the Inspector.
+    - The Teleport-death clip is used for spawn intro only; SmallRabbit death is currently instant and does not use a death animation.
     */
 
     private enum State
@@ -42,6 +45,12 @@ public class SmallRabbit : MonoBehaviour
     public Animator animator;
     public Rigidbody2D rb;
 
+    [Header("Facing")]
+    [SerializeField] private SpriteRenderer facingSpriteRenderer;
+    [SerializeField] private Transform facingTransform;
+    [SerializeField] private bool useSpriteFlip = true;
+    [SerializeField] private bool invertFacingDirection;
+
     [Header("Spawn Activation")]
     [SerializeField] private bool startDormantUntilSpawned = true;
 
@@ -60,6 +69,21 @@ public class SmallRabbit : MonoBehaviour
     [SerializeField] private float animationEntryDelay = 0.05f;
     [SerializeField] private float animationFallbackDuration = 0.5f;
 
+    [Header("Death")]
+    [SerializeField] private float destroyDelayOnHit;
+
+    [Header("Audio - Enemy SFX")]
+    [SerializeField] private AudioClip attackHitSfx;
+    [SerializeField] private AudioClip attackMissSfx;
+    [Tooltip("Sound played when the rabbit starts a hop.")]
+    [SerializeField] private AudioClip hopSfx;
+    [SerializeField] private bool playAttackHitSfx = true;
+    [SerializeField] private bool playAttackMissSfx = true;
+    [SerializeField] private bool playHopSfx = true;
+    [Range(0f, 1f)] [SerializeField] private float attackHitSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float attackMissSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float hopSfxVolume = 1f;
+
     private State currentState = State.Hopping;
     private float nextHopTime;
     private bool damageDealtThisAttack;
@@ -72,11 +96,14 @@ public class SmallRabbit : MonoBehaviour
     private bool hasStarted;
     private bool pendingSpawnIntro;
     private bool isSpawnIntroPlaying;
+    private Vector3 facingTransformBaseScale = Vector3.one;
 
     private void Reset()
     {
         animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
+        facingTransform = transform;
+        facingSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     private void OnValidate()
@@ -89,6 +116,16 @@ public class SmallRabbit : MonoBehaviour
         if (rb == null)
         {
             rb = GetComponent<Rigidbody2D>();
+        }
+
+        if (facingTransform == null)
+        {
+            facingTransform = transform;
+        }
+
+        if (facingSpriteRenderer == null)
+        {
+            facingSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
         }
     }
 
@@ -107,10 +144,21 @@ public class SmallRabbit : MonoBehaviour
         primaryCollider = GetComponent<Collider2D>();
         cachedColliders = GetComponentsInChildren<Collider2D>(true);
         cachedSpriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+        if (facingTransform == null)
+        {
+            facingTransform = transform;
+        }
+
+        if (facingSpriteRenderer == null && cachedSpriteRenderers.Length > 0)
+        {
+            facingSpriteRenderer = cachedSpriteRenderers[0];
+        }
+
+        facingTransformBaseScale = facingTransform != null ? facingTransform.localScale : transform.localScale;
         ConfigureDamageRelays();
 
         rb.bodyType = RigidbodyType2D.Dynamic;
-        rb.constraints |= RigidbodyConstraints2D.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.gravityScale = Mathf.Max(rb.gravityScale, minimumGravityScale);
 
@@ -153,6 +201,11 @@ public class SmallRabbit : MonoBehaviour
         }
 
         AcquirePlayerIfNeeded();
+
+        if (currentState != State.Dead)
+        {
+            FacePlayer();
+        }
 
         if (currentState == State.Dead || currentState == State.Attacking)
         {
@@ -213,7 +266,7 @@ public class SmallRabbit : MonoBehaviour
             return;
         }
 
-        EnterState(State.Dead);
+        DieImmediately();
     }
 
     /// <summary>
@@ -236,11 +289,15 @@ public class SmallRabbit : MonoBehaviour
         }
 
         damageDealtThisAttack = true;
+        if (playAttackHitSfx && attackHitSfx != null)
+        {
+            AudioManager.PlaySfxAt(attackHitSfx, transform.position, attackHitSfxVolume);
+        }
         ApplyDamageToPlayer();
     }
 
     /// <summary>
-    /// Animation Event for the death clip that disables collisions and hides the rabbit.
+    /// Optional helper for future death clips; currently unused because SmallRabbit death is instant.
     /// </summary>
     public void ExecuteDeath()
     {
@@ -249,29 +306,7 @@ public class SmallRabbit : MonoBehaviour
             return;
         }
 
-        deathExecuted = true;
-
-        if (rb != null)
-        {
-            rb.velocity = Vector2.zero;
-            rb.simulated = false;
-        }
-
-        for (int index = 0; index < cachedColliders.Length; index++)
-        {
-            if (cachedColliders[index] != null)
-            {
-                cachedColliders[index].enabled = false;
-            }
-        }
-
-        for (int index = 0; index < cachedSpriteRenderers.Length; index++)
-        {
-            if (cachedSpriteRenderers[index] != null)
-            {
-                cachedSpriteRenderers[index].enabled = false;
-            }
-        }
+        DisableAndHide();
     }
 
     private void EnterState(State newState)
@@ -345,9 +380,19 @@ public class SmallRabbit : MonoBehaviour
 
             if (!IsPlayerWithinAttackRange())
             {
+                if (!damageDealtThisAttack && playAttackMissSfx && attackMissSfx != null)
+                {
+                    AudioManager.PlaySfxAt(attackMissSfx, transform.position, attackMissSfxVolume);
+                }
+
                 stateRoutine = null;
                 EnterState(State.Hopping);
                 yield break;
+            }
+
+            if (!damageDealtThisAttack && playAttackMissSfx && attackMissSfx != null)
+            {
+                AudioManager.PlaySfxAt(attackMissSfx, transform.position, attackMissSfxVolume);
             }
 
             firstCycle = false;
@@ -365,6 +410,21 @@ public class SmallRabbit : MonoBehaviour
 
         stateRoutine = null;
         Destroy(gameObject);
+    }
+
+    private void DieImmediately()
+    {
+        if (stateRoutine != null)
+        {
+            StopCoroutine(stateRoutine);
+            stateRoutine = null;
+        }
+
+        currentState = State.Dead;
+        isSpawnIntroPlaying = false;
+        pendingSpawnIntro = false;
+        DisableAndHide();
+        Destroy(gameObject, destroyDelayOnHit);
     }
 
     private void ApplyAnimatorParameters()
@@ -410,6 +470,10 @@ public class SmallRabbit : MonoBehaviour
         FaceDirection(direction);
 
         rb.velocity = new Vector2(direction * hopForceX, hopForceY);
+        if (playHopSfx && hopSfx != null)
+        {
+            AudioManager.PlaySfxAt(hopSfx, transform.position, hopSfxVolume);
+        }
         nextHopTime = Time.time + hopInterval;
     }
 
@@ -453,9 +517,29 @@ public class SmallRabbit : MonoBehaviour
             return;
         }
 
-        Vector3 localScale = transform.localScale;
-        localScale.x = Mathf.Abs(localScale.x) * Mathf.Sign(direction);
-        transform.localScale = localScale;
+        float desiredDirection = invertFacingDirection ? -Mathf.Sign(direction) : Mathf.Sign(direction);
+
+        if (useSpriteFlip && facingSpriteRenderer != null)
+        {
+            facingSpriteRenderer.flipX = desiredDirection < 0f;
+        }
+
+        Transform targetTransform = facingTransform != null ? facingTransform : transform;
+        Vector3 baseScale = facingTransform != null ? facingTransformBaseScale : transform.localScale;
+        Vector3 localScale = targetTransform.localScale;
+
+        if (useSpriteFlip && facingSpriteRenderer != null)
+        {
+            localScale.x = Mathf.Abs(baseScale.x);
+        }
+        else
+        {
+            localScale.x = Mathf.Abs(baseScale.x) * desiredDirection;
+        }
+
+        localScale.y = baseScale.y;
+        localScale.z = baseScale.z;
+        targetTransform.localScale = localScale;
     }
 
     private void ApplyDamageToPlayer()
@@ -581,6 +665,38 @@ public class SmallRabbit : MonoBehaviour
         }
 
         stateRoutine = StartCoroutine(SpawnIntroRoutine());
+    }
+
+    private void DisableAndHide()
+    {
+        deathExecuted = true;
+
+        if (animator != null)
+        {
+            animator.enabled = false;
+        }
+
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+            rb.simulated = false;
+        }
+
+        for (int index = 0; index < cachedColliders.Length; index++)
+        {
+            if (cachedColliders[index] != null)
+            {
+                cachedColliders[index].enabled = false;
+            }
+        }
+
+        for (int index = 0; index < cachedSpriteRenderers.Length; index++)
+        {
+            if (cachedSpriteRenderers[index] != null)
+            {
+                cachedSpriteRenderers[index].enabled = false;
+            }
+        }
     }
 
     private IEnumerator SpawnIntroRoutine()

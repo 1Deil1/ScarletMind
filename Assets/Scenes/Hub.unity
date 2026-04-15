@@ -4839,6 +4839,11 @@ MonoBehaviour:
   sanityPerDamagePoint: 5
   endingSceneName: Ending
   gameOverDelay: 0.75
+  recoverToHubRoomOnZeroSanity: 1
+  defeatsBeforeEnding: 3
+  recoverySceneName: Hub_ROOM
+  recoverySpawnId: hubROOM
+  recoverySanity: 50
   hubSceneName: Hub
   hubFirstEnterSanity: 50
   hubReturnBonus: 30

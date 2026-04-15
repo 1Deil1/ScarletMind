@@ -52,6 +52,10 @@ public class EnemyAI : MonoBehaviour
     [Header("Audio - Enemy SFX")]
     [SerializeField] private AudioClip enemyAttackHitSfx;
     [SerializeField] private AudioClip enemyAttackMissSfx;
+    [SerializeField] private bool playAttackHitSfx = true;
+    [SerializeField] private bool playAttackMissSfx = true;
+    [Range(0f, 1f)] [SerializeField] private float attackHitSfxVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float attackMissSfxVolume = 1f;
 
     [Header("Critical Hit Reaction")]
     [Tooltip("How long the enemy is stunned after a critical weak point hit (real seconds).")]
@@ -213,7 +217,9 @@ public class EnemyAI : MonoBehaviour
         }
         // SFX after deciding hit/miss
         var clip = hit ? enemyAttackHitSfx : enemyAttackMissSfx;
-        if (clip != null) AudioManager.PlaySfxAt(clip, transform.position, 1f);
+        float clipVolume = hit ? attackHitSfxVolume : attackMissSfxVolume;
+        bool shouldPlayClip = hit ? playAttackHitSfx : playAttackMissSfx;
+        if (shouldPlayClip && clip != null) AudioManager.PlaySfxAt(clip, transform.position, clipVolume);
 
         // Wait remaining cooldown before chasing again
         float remaining = Mathf.Max(0f, (lastAttackTime + attackCooldown) - Time.time);
